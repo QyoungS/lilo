@@ -4,6 +4,7 @@
 #include "TransactionWidget.h"
 #include "TransferDialog.h"
 #include "BudgetWidget.h"
+#include "SettingsDialog.h"
 #include "AuthManager.h"
 #include "NotificationManager.h"
 #include <QMenuBar>
@@ -28,7 +29,12 @@ MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
     setupToolBar();
     setupStatusBar();
 
-    applyTheme(false);
+    // 저장된 사용자 테마 우선 로드, 없으면 기본 라이트 테마
+    QString saved = SettingsDialog::loadSavedQss();
+    if (!saved.isEmpty())
+        qApp->setStyleSheet(saved);
+    else
+        applyTheme(false);
 }
 
 void MainWindow::setupTabs() {
@@ -68,6 +74,13 @@ void MainWindow::setupMenuBar() {
     auto* darkAct  = viewMenu->addAction("다크 모드");
     darkAct->setCheckable(true);
     connect(darkAct, &QAction::toggled, this, &MainWindow::onToggleDarkMode);
+
+    viewMenu->addSeparator();
+    auto* themeAct = viewMenu->addAction("테마 및 스타일 편집기...");
+    connect(themeAct, &QAction::triggered, this, [this]() {
+        SettingsDialog dlg(this);
+        dlg.exec();
+    });
 
     auto* helpMenu = menuBar()->addMenu("도움말(&H)");
     auto* aboutAct = helpMenu->addAction("정보");

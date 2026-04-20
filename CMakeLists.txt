@@ -27,6 +27,7 @@ set(SOURCES
     ui/TransactionWidget.cpp
     ui/TransferDialog.cpp
     ui/BudgetWidget.cpp
+    ui/SettingsDialog.cpp
 )
 
 set(HEADERS
@@ -47,6 +48,7 @@ set(HEADERS
     ui/TransactionWidget.h
     ui/TransferDialog.h
     ui/BudgetWidget.h
+    ui/SettingsDialog.h
 )
 
 qt_add_executable(AccountManager

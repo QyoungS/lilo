@@ -22,6 +22,7 @@
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QChart>
+#include <QtWidgets>
 
 // ─── 잔액 요약 카드 ──────────────────────────────────────────
 static QGroupBox* makeSummaryCard(const QString& title, QLabel*& valLabel,

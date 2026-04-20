@@ -3,6 +3,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QColor>
 
 // 6 columns — 통화 컬럼 제거, KRW 고정
 const QStringList AccountModel::s_headers = {
