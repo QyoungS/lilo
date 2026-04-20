@@ -1,7 +1,10 @@
 #pragma once
 #include <QMainWindow>
-#include <QTabWidget>
+#include <QStackedWidget>
 #include <QLabel>
+#include <QPushButton>
+#include <QList>
+#include <QTimer>
 
 class DashboardWidget;
 class AccountWidget;
@@ -17,22 +20,34 @@ public:
 private slots:
     void onToggleDarkMode(bool enabled);
     void onLogout();
+    void setActivePage(int index);
+    void fetchExchangeRates();
 
 private:
     void setupMenuBar();
-    void setupToolBar();
     void setupStatusBar();
-    void setupTabs();
+    void setupSidebar();
     void applyTheme(bool dark);
 
     int     m_userId;
     QString m_username;
 
-    QTabWidget*       m_tabs;
-    DashboardWidget*  m_dashboard;
-    AccountWidget*    m_accounts;
+    QStackedWidget*     m_stack;
+    QList<QPushButton*> m_navBtns;
+
+    DashboardWidget*   m_dashboard;
+    AccountWidget*     m_accounts;
     TransactionWidget* m_transactions;
-    BudgetWidget*     m_budgets;
+    BudgetWidget*      m_budgets;
+
+    // 사이드바 환율 레이블
+    QLabel* m_sideUsdLabel    = nullptr;
+    QLabel* m_sideJpyLabel    = nullptr;
+    QLabel* m_sideEurLabel    = nullptr;
+    QLabel* m_sideCnyLabel    = nullptr;
+    QLabel* m_sideRateTimeLbl = nullptr;
+
+    QTimer* m_rateTimer = nullptr;
 
     QLabel* m_statusUser;
     bool    m_darkMode = false;

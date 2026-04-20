@@ -7,14 +7,10 @@
 #include <QSqlQuery>
 #include <QDateTime>
 #include <QSizePolicy>
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QUrl>
 #include <QPainter>
-#include <QPushButton>
+#include <QProgressBar>
+#include <QScrollArea>
+#include <QHeaderView>
 #include <QtCharts/QChartView>
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarSet>
@@ -57,59 +53,11 @@ static QGroupBox* makeSummaryCard(const QString& title, QLabel*& valLabel,
     return box;
 }
 
-// ─── 환율 카드 ───────────────────────────────────────────────
-static QGroupBox* makeRateCard(const QString& code, const QString& name,
-                                QLabel*& valLabel, QWidget* parent) {
-    auto* box = new QGroupBox(parent);
-    box->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    box->setFixedHeight(114);
-    box->setStyleSheet(
-        "QGroupBox { border:1px solid #E5E7EB; border-radius:10px; "
-        "background:#FFFFFF; margin-top:0; }");
-
-    auto* codeLbl = new QLabel(code, box);
-    codeLbl->setFont(QFont("맑은 고딕", 13, QFont::Bold));
-    codeLbl->setStyleSheet("color:#111827; background:transparent;");
-    codeLbl->setFixedHeight(24);
-
-    auto* nameLbl = new QLabel(name, box);
-    nameLbl->setFont(QFont("맑은 고딕", 8));
-    nameLbl->setStyleSheet("color:#6B7280; background:transparent;");
-    nameLbl->setFixedHeight(16);
-
-    valLabel = new QLabel("—", box);
-    valLabel->setFont(QFont("맑은 고딕", 15, QFont::Bold));
-    valLabel->setStyleSheet("color:#2563EB; background:transparent;");
-    valLabel->setFixedHeight(28);
-
-    const bool isJpy = (code == "JPY");
-    auto* unitLbl = new QLabel(isJpy ? "100엔 기준" : "1단위 기준", box);
-    unitLbl->setFont(QFont("맑은 고딕", 8));
-    unitLbl->setStyleSheet("color:#9CA3AF; background:transparent;");
-    unitLbl->setFixedHeight(14);
-
-    auto* l = new QVBoxLayout(box);
-    l->setContentsMargins(14, 10, 14, 8);
-    l->setSpacing(3);
-    l->addWidget(codeLbl);
-    l->addWidget(nameLbl);
-    l->addStretch();
-    l->addWidget(valLabel);
-    l->addWidget(unitLbl);
-    return box;
-}
-
 // ════════════════════════════════════════════════════════════
 DashboardWidget::DashboardWidget(int userId, QWidget* parent)
     : QWidget(parent), m_userId(userId)
 {
     setupUi();
-
-    m_rateTimer = new QTimer(this);
-    m_rateTimer->setInterval(5 * 60 * 1000);
-    connect(m_rateTimer, &QTimer::timeout, this, &DashboardWidget::fetchExchangeRates);
-    m_rateTimer->start();
-
     refresh();
 }
 
@@ -129,37 +77,47 @@ void DashboardWidget::setupUi() {
         "이번 달 지출", m_monthExpenseLabel, "#C62828", "#FFEBEE", "#C62828", this));
     root->addLayout(cardsRow);
 
-    // ── 2. 환율 섹션 ─────────────────────────────────────────
-    auto* rateGroup = new QGroupBox("실시간 환율", this);
-    rateGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    auto* rateLayout = new QVBoxLayout(rateGroup);
-    rateLayout->setContentsMargins(12, 8, 12, 12);
-    rateLayout->setSpacing(8);
+    // ── 2. 최근 거래 내역 + 예산 대비 지출 ───────────────────
+    auto* recentGroup = new QGroupBox("최근 거래 내역", this);
+    recentGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    recentGroup->setFixedHeight(210);
+    auto* recentLay = new QVBoxLayout(recentGroup);
+    recentLay->setContentsMargins(8, 4, 8, 8);
 
-    auto* rateHeader = new QHBoxLayout;
-    m_rateUpdateLabel = new QLabel("업데이트 중...", this);
-    m_rateUpdateLabel->setFont(QFont("맑은 고딕", 8));
-    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; background:transparent;");
-    auto* refreshBtn = new QPushButton("↻ 새로고침", this);
-    refreshBtn->setFixedSize(86, 26);
-    refreshBtn->setStyleSheet(
-        "QPushButton { background:#EFF6FF; color:#2563EB; border:none; "
-        "border-radius:5px; font-size:8.5pt; font-weight:600; }"
-        "QPushButton:hover { background:#DBEAFE; }");
-    connect(refreshBtn, &QPushButton::clicked, this, &DashboardWidget::fetchExchangeRates);
-    rateHeader->addWidget(m_rateUpdateLabel);
-    rateHeader->addStretch();
-    rateHeader->addWidget(refreshBtn);
-    rateLayout->addLayout(rateHeader);
+    m_recentTxTable = new QTableWidget(0, 4, recentGroup);
+    m_recentTxTable->setHorizontalHeaderLabels({"날짜", "계좌명", "유형", "금액"});
+    m_recentTxTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_recentTxTable->horizontalHeader()->setFont(QFont("맑은 고딕", 8, QFont::DemiBold));
+    m_recentTxTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_recentTxTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_recentTxTable->verticalHeader()->hide();
+    m_recentTxTable->setAlternatingRowColors(true);
+    m_recentTxTable->setShowGrid(false);
+    m_recentTxTable->setFrameShape(QFrame::NoFrame);
+    m_recentTxTable->setFont(QFont("맑은 고딕", 9));
+    recentLay->addWidget(m_recentTxTable);
 
-    auto* rateCards = new QHBoxLayout;
-    rateCards->setSpacing(10);
-    rateCards->addWidget(makeRateCard("USD", "미국 달러", m_usdLabel, this));
-    rateCards->addWidget(makeRateCard("JPY", "일본 엔",   m_jpyLabel, this));
-    rateCards->addWidget(makeRateCard("EUR", "유로",      m_eurLabel, this));
-    rateCards->addWidget(makeRateCard("CNY", "중국 위안", m_cnyLabel, this));
-    rateLayout->addLayout(rateCards);
-    root->addWidget(rateGroup);
+    auto* budgetGroup = new QGroupBox("예산 대비 지출", this);
+    budgetGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    budgetGroup->setFixedHeight(210);
+    auto* budgetGroupLay = new QVBoxLayout(budgetGroup);
+    budgetGroupLay->setContentsMargins(8, 4, 8, 8);
+
+    auto* budgetScroll = new QScrollArea(budgetGroup);
+    budgetScroll->setWidgetResizable(true);
+    budgetScroll->setFrameShape(QFrame::NoFrame);
+    m_budgetContainer = new QWidget;
+    m_budgetLayout = new QVBoxLayout(m_budgetContainer);
+    m_budgetLayout->setContentsMargins(4, 4, 4, 4);
+    m_budgetLayout->setSpacing(10);
+    budgetScroll->setWidget(m_budgetContainer);
+    budgetGroupLay->addWidget(budgetScroll);
+
+    auto* midRow = new QHBoxLayout;
+    midRow->setSpacing(12);
+    midRow->addWidget(recentGroup, 1);
+    midRow->addWidget(budgetGroup, 1);
+    root->addLayout(midRow);
 
     // ── 3. 차트 ──────────────────────────────────────────────
     setupCharts();
@@ -202,7 +160,8 @@ void DashboardWidget::refresh() {
     updateSummaryCards();
     updateBarChart();
     updatePieChart();
-    fetchExchangeRates();
+    updateRecentTransactions();
+    updateBudgetProgress();
 }
 
 void DashboardWidget::updateSummaryCards() {
@@ -228,6 +187,131 @@ void DashboardWidget::updateSummaryCards() {
           AND strftime('%Y-%m',t.created_at)=strftime('%Y-%m','now','localtime'))");
     q.bindValue(":uid", m_userId);
     if (q.exec() && q.next()) m_monthExpenseLabel->setText(fmt(q.value(0).toDouble()));
+}
+
+void DashboardWidget::updateRecentTransactions() {
+    auto db = DatabaseManager::instance().database();
+    QSqlQuery q(db);
+    q.prepare(R"(
+        SELECT t.created_at, a.name, t.type, t.amount
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE a.user_id = :uid
+        ORDER BY t.created_at DESC
+        LIMIT 5
+    )");
+    q.bindValue(":uid", m_userId);
+
+    m_recentTxTable->setRowCount(0);
+    if (!q.exec()) return;
+
+    int row = 0;
+    while (q.next()) {
+        m_recentTxTable->insertRow(row);
+
+        QString rawDate = q.value(0).toString();
+        QDateTime dt = QDateTime::fromString(rawDate, "yyyy-MM-dd HH:mm:ss");
+        if (!dt.isValid()) dt = QDateTime::fromString(rawDate, Qt::ISODate);
+        QString fmtDate = dt.isValid() ? dt.toString("MM/dd HH:mm") : rawDate.left(10);
+
+        QString type   = q.value(2).toString();
+        double  amount = q.value(3).toDouble();
+        QColor  color  = (type == "입금") ? QColor("#059669") : QColor("#EF4444");
+
+        auto* dateItem = new QTableWidgetItem(fmtDate);
+        auto* acctItem = new QTableWidgetItem(q.value(1).toString());
+        auto* typeItem = new QTableWidgetItem(type);
+        typeItem->setForeground(color);
+        typeItem->setTextAlignment(Qt::AlignCenter);
+
+        auto* amtItem = new QTableWidgetItem(AccountModel::formatKRW(amount));
+        amtItem->setForeground(color);
+        amtItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+        m_recentTxTable->setItem(row, 0, dateItem);
+        m_recentTxTable->setItem(row, 1, acctItem);
+        m_recentTxTable->setItem(row, 2, typeItem);
+        m_recentTxTable->setItem(row, 3, amtItem);
+        ++row;
+    }
+}
+
+void DashboardWidget::updateBudgetProgress() {
+    while (QLayoutItem* item = m_budgetLayout->takeAt(0)) {
+        if (QWidget* w = item->widget()) w->deleteLater();
+        delete item;
+    }
+
+    auto db = DatabaseManager::instance().database();
+    QSqlQuery q(db);
+    q.prepare(R"(
+        SELECT b.category, b.monthly_limit,
+               COALESCE(SUM(t.amount), 0) AS spent
+        FROM budgets b
+        LEFT JOIN accounts a ON a.user_id = b.user_id
+        LEFT JOIN transactions t ON t.account_id = a.id
+            AND t.type = '출금'
+            AND t.category = b.category
+            AND strftime('%Y-%m', t.created_at) = strftime('%Y-%m', 'now', 'localtime')
+        WHERE b.user_id = :uid
+        GROUP BY b.id, b.category, b.monthly_limit
+        ORDER BY b.category
+    )");
+    q.bindValue(":uid", m_userId);
+
+    bool hasData = false;
+    if (q.exec()) {
+        while (q.next()) {
+            hasData = true;
+            QString category = q.value(0).toString();
+            double  budget   = q.value(1).toDouble();
+            double  spent    = q.value(2).toDouble();
+            int     pct      = budget > 0 ? qMin((int)(spent * 100.0 / budget), 100) : 0;
+
+            auto* rowWidget = new QWidget(m_budgetContainer);
+            auto* rowLay    = new QVBoxLayout(rowWidget);
+            rowLay->setContentsMargins(0, 2, 0, 2);
+            rowLay->setSpacing(4);
+
+            auto* hdr    = new QHBoxLayout;
+            auto* catLbl = new QLabel(category, rowWidget);
+            catLbl->setStyleSheet("color:#374151; font-size:9pt; font-weight:600;");
+            auto* amtLbl = new QLabel(
+                QString("%1 / %2")
+                    .arg(AccountModel::formatKRW(spent))
+                    .arg(AccountModel::formatKRW(budget)),
+                rowWidget);
+            amtLbl->setStyleSheet("color:#6B7280; font-size:8pt;");
+            hdr->addWidget(catLbl);
+            hdr->addStretch();
+            hdr->addWidget(amtLbl);
+
+            auto* bar = new QProgressBar(rowWidget);
+            bar->setRange(0, 100);
+            bar->setValue(pct);
+            bar->setTextVisible(true);
+            bar->setFormat(QString::number(pct) + "%");
+            bar->setFixedHeight(14);
+            QString barColor = pct >= 100 ? "#EF4444" : pct >= 80 ? "#F59E0B" : "#3B82F6";
+            bar->setStyleSheet(QString(
+                "QProgressBar { background:#F3F4F6; border-radius:7px; border:none; "
+                "text-align:center; font-size:7pt; color:#374151; }"
+                "QProgressBar::chunk { background:%1; border-radius:7px; }")
+                .arg(barColor));
+
+            rowLay->addLayout(hdr);
+            rowLay->addWidget(bar);
+            m_budgetLayout->addWidget(rowWidget);
+        }
+    }
+
+    if (!hasData) {
+        auto* emptyLbl = new QLabel("이번 달 등록된 예산이 없습니다.", m_budgetContainer);
+        emptyLbl->setAlignment(Qt::AlignCenter);
+        emptyLbl->setStyleSheet("color:#9CA3AF; font-size:9pt; padding:20px;");
+        m_budgetLayout->addWidget(emptyLbl);
+    }
+    m_budgetLayout->addStretch();
 }
 
 void DashboardWidget::updateBarChart() {
@@ -269,7 +353,6 @@ void DashboardWidget::updateBarChart() {
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->setBackgroundVisible(false);
     chart->setPlotAreaBackgroundVisible(false);
-    // Y축 레이블이 잘리지 않도록 왼쪽 마진 충분히 확보
     chart->setMargins(QMargins(20, 10, 10, 10));
 
     auto* legend = chart->legend();
@@ -293,7 +376,6 @@ void DashboardWidget::updateBarChart() {
     axisY->setGridLineColor(QColor("#F3F4F6"));
     axisY->setLinePenColor(Qt::transparent);
     axisY->setTickCount(5);
-    // 천 단위 콤마: "10,000" 형태로 표시하기 위해 만 단위 레이블 사용
     axisY->setLabelFormat("%'.0f");
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
@@ -352,42 +434,4 @@ void DashboardWidget::updatePieChart() {
     legend->setMarkerShape(QLegend::MarkerShapeCircle);
 
     static_cast<QChartView*>(m_pieChartView)->setChart(chart);
-}
-
-void DashboardWidget::fetchExchangeRates() {
-    m_rateUpdateLabel->setText("환율 불러오는 중...");
-    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; background:transparent;");
-    auto* nam   = new QNetworkAccessManager(this);
-    auto* reply = nam->get(QNetworkRequest(QUrl("https://open.er-api.com/v6/latest/KRW")));
-
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            m_rateUpdateLabel->setText("⚠ 환율 정보를 가져올 수 없습니다");
-            m_rateUpdateLabel->setStyleSheet("color:#EF4444; background:transparent;");
-            m_usdLabel->setText("—"); m_jpyLabel->setText("—");
-            m_eurLabel->setText("—"); m_cnyLabel->setText("—");
-            return;
-        }
-
-        auto doc   = QJsonDocument::fromJson(reply->readAll());
-        auto rates = doc.object()["rates"].toObject();
-
-        auto krwPer = [&](const QString& code) -> double {
-            double r = rates[code].toDouble();
-            return r > 0 ? 1.0 / r : 0.0;
-        };
-        auto fmt = [](double v) { return AccountModel::formatKRW(qRound(v)); };
-
-        m_usdLabel->setText(fmt(krwPer("USD")));
-        m_jpyLabel->setText(fmt(krwPer("JPY") * 100));
-        m_eurLabel->setText(fmt(krwPer("EUR")));
-        m_cnyLabel->setText(fmt(krwPer("CNY")));
-
-        m_rateUpdateLabel->setText(
-            "● 마지막 업데이트: " +
-            QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
-        m_rateUpdateLabel->setStyleSheet(
-            "color:#059669; font-weight:600; background:transparent;");
-    });
 }
