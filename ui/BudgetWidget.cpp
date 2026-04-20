@@ -101,7 +101,12 @@ void BudgetWidget::loadBudgets() {
         m_table->setCellWidget(row, 4, bar);
         ++row;
     }
-    m_table->resizeColumnsToContents();
+    auto* hdr = m_table->horizontalHeader();
+    hdr->setSectionResizeMode(QHeaderView::Fixed);
+    hdr->setSectionResizeMode(4, QHeaderView::Stretch);
+    m_table->setColumnWidth(1, 100);
+    m_table->setColumnWidth(2, 130);
+    m_table->setColumnWidth(3, 130);
 }
 
 void BudgetWidget::refresh() {

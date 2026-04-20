@@ -1,7 +1,9 @@
 #include "TransactionModel.h"
+#include "AccountModel.h"
 #include "DatabaseManager.h"
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QColor>
 #include <QDebug>
 
 const QStringList TransactionModel::s_headers = {
@@ -16,17 +18,30 @@ int TransactionModel::columnCount(const QModelIndex&) const { return s_headers.s
 QVariant TransactionModel::data(const QModelIndex& index, int role) const {
     if (!index.isValid() || index.row() >= m_transactions.size())
         return {};
+
+    const Transaction& t = m_transactions[index.row()];
+
+    if (role == Qt::ForegroundRole) {
+        if (index.column() == 3 || index.column() == 5) {
+            if (t.type == "입금") return QColor("#059669");
+            if (t.type == "출금") return QColor("#DC2626");
+        }
+        return {};
+    }
+
+    if (role == Qt::TextAlignmentRole && index.column() == 5)
+        return int(Qt::AlignRight | Qt::AlignVCenter);
+
     if (role != Qt::DisplayRole && role != Qt::EditRole)
         return {};
 
-    const Transaction& t = m_transactions[index.row()];
     switch (index.column()) {
     case 0: return t.id;
     case 1: return t.createdAt;
     case 2: return t.accountName;
     case 3: return t.type;
     case 4: return t.category;
-    case 5: return QString::number(t.amount, 'f', 2);
+    case 5: return AccountModel::formatKRW(t.amount);
     case 6: return t.description;
     }
     return {};

@@ -1,239 +1,295 @@
 /* ============================================================
-   BANKING LIGHT THEME  —  KB/신한 스타일
+   CLEAN LIGHT THEME  —  Toss/Linear 스타일
    ============================================================ */
 
 * {
-    font-family: "맑은 고딕", "Malgun Gothic", "Segoe UI", Arial, sans-serif;
+    font-family: "맑은 고딕", "Malgun Gothic", "Segoe UI", sans-serif;
     font-size: 10pt;
+    outline: none;
 }
 
-/* ── 기본 배경 ──────────────────────────────────────────── */
-QMainWindow, QWidget { background: #F0F4FA; color: #1A2233; }
-QDialog              { background: #FFFFFF; color: #1A2233; }
+/* ── 전체 배경 ──────────────────────────────────────────────── */
+QWidget     { background: #F9FAFB; color: #111827; }
+QDialog     { background: #FFFFFF; color: #111827; }
+QMainWindow { background: #F9FAFB; }
 
-/* ── 메뉴바 ─────────────────────────────────────────────── */
+/* ── 메뉴바 ─────────────────────────────────────────────────── */
 QMenuBar {
-    background: #003585;
-    color: #FFFFFF;
-    padding: 2px 4px;
-    spacing: 2px;
-    border-bottom: 2px solid #002060;
+    background: #FFFFFF;
+    color: #374151;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 0 8px;
+    spacing: 0;
 }
-QMenuBar::item            { padding: 6px 14px; border-radius: 4px; background: transparent; }
-QMenuBar::item:selected,
-QMenuBar::item:pressed    { background: #0046B3; }
+QMenuBar::item {
+    padding: 8px 14px;
+    background: transparent;
+    border-radius: 6px;
+    margin: 2px;
+}
+QMenuBar::item:selected, QMenuBar::item:pressed {
+    background: #EFF6FF;
+    color: #2563EB;
+}
 
 QMenu {
     background: #FFFFFF;
-    border: 1px solid #CBD5E1;
+    border: 1px solid #E5E7EB;
     border-radius: 8px;
     padding: 6px;
+    box-shadow: none;
 }
-QMenu::item              { padding: 8px 22px; border-radius: 4px; color: #1A2233; }
-QMenu::item:selected     { background: #EFF6FF; color: #1D4ED8; }
-QMenu::separator         { height: 1px; background: #E2E8F0; margin: 4px 12px; }
+QMenu::item { padding: 8px 20px; border-radius: 5px; color: #111827; }
+QMenu::item:selected { background: #EFF6FF; color: #2563EB; }
+QMenu::separator { height: 1px; background: #F3F4F6; margin: 4px 10px; }
 
-/* ── 툴바 ────────────────────────────────────────────────── */
+/* ── 툴바 ────────────────────────────────────────────────────── */
 QToolBar {
-    background: #003585;
-    border: none;
-    padding: 4px 10px;
-    spacing: 6px;
+    background: #FFFFFF;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 4px 12px;
+    spacing: 4px;
 }
-QToolBar::separator { width: 1px; background: rgba(255,255,255,0.25); margin: 4px 4px; }
+QToolBar::separator { width: 1px; background: #E5E7EB; margin: 4px 6px; }
 QToolBar QToolButton {
     background: transparent;
-    color: #FFFFFF;
-    border: 1px solid rgba(255,255,255,0.30);
-    border-radius: 5px;
+    color: #374151;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
     padding: 5px 14px;
     font-size: 9.5pt;
     font-weight: 600;
 }
-QToolBar QToolButton:hover  { background: rgba(255,255,255,0.15); }
-QToolBar QToolButton:pressed{ background: rgba(255,255,255,0.08); }
+QToolBar QToolButton:hover  { background: #F3F4F6; color: #111827; border-color: #D1D5DB; }
+QToolBar QToolButton:pressed{ background: #E5E7EB; }
 
-/* ── 상태바 ─────────────────────────────────────────────── */
+/* ── 상태바 ─────────────────────────────────────────────────── */
 QStatusBar {
-    background: #F8FAFC;
-    border-top: 1px solid #E2E8F0;
-    color: #64748B;
+    background: #FFFFFF;
+    border-top: 1px solid #E5E7EB;
+    color: #6B7280;
     font-size: 9pt;
+    padding: 0 8px;
 }
 
-/* ── 탭 ──────────────────────────────────────────────────── */
-QTabWidget::pane { border: none; background: #F0F4FA; }
+/* ── 탭 ──────────────────────────────────────────────────────── */
+QTabWidget::pane { border: none; background: #F9FAFB; }
 QTabBar {
     background: #FFFFFF;
-    border-bottom: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E5E7EB;
 }
 QTabBar::tab {
     background: transparent;
-    color: #64748B;
-    padding: 13px 26px;
-    font-size: 10pt;
+    color: #6B7280;
+    padding: 12px 22px;
+    font-size: 9.5pt;
     font-weight: 500;
     border: none;
-    border-bottom: 3px solid transparent;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
 }
 QTabBar::tab:selected {
-    color: #1D4ED8;
-    border-bottom: 3px solid #1D4ED8;
+    color: #2563EB;
+    border-bottom: 2px solid #2563EB;
     font-weight: 700;
 }
-QTabBar::tab:hover:!selected { color: #3B82F6; background: #F0F7FF; }
+QTabBar::tab:hover:!selected { color: #374151; background: #F9FAFB; }
 
-/* ── 카드 (GroupBox) ─────────────────────────────────────── */
+/* ── 카드 (GroupBox) ─────────────────────────────────────────── */
 QGroupBox {
     background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    margin-top: 14px;
-    padding: 14px 18px 18px 18px;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    margin-top: 16px;
+    padding: 16px 20px 20px 20px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    left: 18px; top: 5px;
-    color: #64748B;
+    left: 16px; top: 6px;
+    color: #6B7280;
     font-size: 8.5pt;
     font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
-/* ── 테이블 ──────────────────────────────────────────────── */
+/* ── 테이블 ──────────────────────────────────────────────────── */
 QTableView, QTableWidget {
     background: #FFFFFF;
-    border: 1px solid #E2E8F0;
+    border: 1px solid #E5E7EB;
     border-radius: 10px;
-    gridline-color: #F1F5F9;
+    gridline-color: #F9FAFB;
     selection-background-color: #EFF6FF;
     selection-color: #1D4ED8;
-    alternate-background-color: #FAFBFD;
+    alternate-background-color: #F9FAFB;
+    show-decoration-selected: 1;
 }
 QTableView::item, QTableWidget::item {
-    padding: 9px 14px;
+    padding: 0 14px;
     border: none;
+    height: 40px;
 }
-QTableView::item:hover { background: #F0F7FF; }
+QTableView::item:selected, QTableWidget::item:selected {
+    background: #EFF6FF;
+    color: #1D4ED8;
+}
+QTableView::item:hover:!selected { background: #F5F8FF; }
 
+QHeaderView { background: transparent; border: none; }
 QHeaderView::section {
-    background: #F8FAFC;
-    color: #475569;
+    background: #F9FAFB;
+    color: #6B7280;
     font-weight: 700;
-    font-size: 9pt;
-    padding: 11px 14px;
+    font-size: 8.5pt;
+    letter-spacing: 0.3px;
+    padding: 0 14px;
+    height: 38px;
     border: none;
-    border-bottom: 2px solid #CBD5E1;
-    border-right: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E5E7EB;
+    border-right: 1px solid #F3F4F6;
 }
+QHeaderView::section:last { border-right: none; }
+QHeaderView::section:hover { background: #F3F4F6; color: #374151; }
 
-/* ── 버튼 ────────────────────────────────────────────────── */
+/* ── 버튼 ────────────────────────────────────────────────────── */
 QPushButton {
-    background: #1D4ED8;
+    background: #2563EB;
     color: #FFFFFF;
     border: none;
-    border-radius: 6px;
-    padding: 8px 20px;
+    border-radius: 7px;
+    padding: 0 18px;
     font-weight: 600;
     font-size: 9.5pt;
-    min-height: 34px;
+    min-height: 36px;
+    min-width: 64px;
 }
-QPushButton:hover   { background: #1E40AF; }
-QPushButton:pressed { background: #1E3A8A; }
-QPushButton:disabled{ background: #CBD5E1; color: #94A3B8; }
+QPushButton:hover   { background: #1D4ED8; }
+QPushButton:pressed { background: #1E40AF; }
+QPushButton:disabled{ background: #E5E7EB; color: #9CA3AF; border: none; }
 
-QPushButton[text="삭제"]    { background: #EF4444; }
-QPushButton[text="삭제"]:hover { background: #DC2626; }
-QPushButton[text="출금"]    { background: #F59E0B; }
-QPushButton[text="출금"]:hover { background: #D97706; }
-QPushButton[text="입금"]    { background: #10B981; }
-QPushButton[text="입금"]:hover { background: #059669; }
-QPushButton[text="이체"]    { background: #8B5CF6; }
-QPushButton[text="이체"]:hover { background: #7C3AED; }
-QPushButton[text="이체..."] { background: #8B5CF6; }
-QPushButton[text="CSV 내보내기"] { background: #0EA5E9; }
-QPushButton[text="CSV 내보내기"]:hover { background: #0284C7; }
-QPushButton[text="새로 고침"],
-QPushButton[text="초기화"]  { background: #64748B; }
-QPushButton[text="새로 고침"]:hover,
-QPushButton[text="초기화"]:hover { background: #475569; }
-QPushButton[text="취소"]    { background: transparent; color: #475569; border: 1.5px solid #CBD5E1; }
-QPushButton[text="취소"]:hover { background: #F1F5F9; }
+QPushButton[text="삭제"]         { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+QPushButton[text="삭제"]:hover   { background: #DC2626; color: #FFFFFF; border-color: #DC2626; }
+QPushButton[text="출금"]         { background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+QPushButton[text="출금"]:hover   { background: #D97706; color: #FFFFFF; border-color: #D97706; }
+QPushButton[text="입금"]         { background: #F0FDF4; color: #059669; border: 1px solid #A7F3D0; }
+QPushButton[text="입금"]:hover   { background: #059669; color: #FFFFFF; border-color: #059669; }
+QPushButton[text="이체"]         { background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE; }
+QPushButton[text="이체"]:hover   { background: #7C3AED; color: #FFFFFF; border-color: #7C3AED; }
+QPushButton[text="이체..."]      { background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE; }
+QPushButton[text="이체..."]:hover{ background: #7C3AED; color: #FFFFFF; border-color: #7C3AED; }
+QPushButton[text="CSV 내보내기"] { background: #F0F9FF; color: #0284C7; border: 1px solid #BAE6FD; }
+QPushButton[text="CSV 내보내기"]:hover { background: #0284C7; color: #FFFFFF; }
+QPushButton[text="취소"], QPushButton[text="닫기"] {
+    background: #FFFFFF; color: #374151;
+    border: 1px solid #D1D5DB;
+}
+QPushButton[text="취소"]:hover, QPushButton[text="닫기"]:hover {
+    background: #F3F4F6; border-color: #9CA3AF;
+}
+QPushButton[text="수정"] { background: #F0F9FF; color: #0284C7; border: 1px solid #BAE6FD; }
+QPushButton[text="수정"]:hover { background: #0284C7; color: #FFFFFF; }
+QPushButton[text="+ 계좌 추가"], QPushButton[text="예산 추가"] {
+    background: #2563EB; color: #FFFFFF; border: none;
+}
 
-/* ── 입력 필드 ───────────────────────────────────────────── */
+/* ── 입력 필드 ───────────────────────────────────────────────── */
 QLineEdit, QDoubleSpinBox, QSpinBox, QDateEdit, QComboBox {
     background: #FFFFFF;
-    border: 1.5px solid #CBD5E1;
-    border-radius: 6px;
-    padding: 6px 12px;
-    color: #1A2233;
+    border: 1px solid #D1D5DB;
+    border-radius: 7px;
+    padding: 0 12px;
+    color: #111827;
     font-size: 9.5pt;
-    min-height: 34px;
+    min-height: 36px;
+    selection-background-color: #DBEAFE;
 }
 QLineEdit:focus, QDoubleSpinBox:focus,
-QDateEdit:focus, QComboBox:focus { border-color: #3B82F6; }
+QDateEdit:focus, QComboBox:focus {
+    border: 1.5px solid #2563EB;
+    background: #FEFEFF;
+}
 QLineEdit:hover, QDoubleSpinBox:hover,
-QDateEdit:hover, QComboBox:hover  { border-color: #94A3B8; }
+QDateEdit:hover, QComboBox:hover { border-color: #9CA3AF; }
+QLineEdit::placeholder { color: #9CA3AF; }
 
 QComboBox::drop-down { border: none; width: 28px; }
 QComboBox::down-arrow {
+    image: none;
     width: 0; height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid #64748B;
-    margin-right: 8px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #6B7280;
+    margin-right: 10px;
 }
 QComboBox QAbstractItemView {
     background: #FFFFFF;
-    border: 1px solid #CBD5E1;
-    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+    border-radius: 7px;
     selection-background-color: #EFF6FF;
-    selection-color: #1D4ED8;
+    selection-color: #2563EB;
     padding: 4px;
+    outline: none;
 }
+QComboBox QAbstractItemView::item { padding: 8px 12px; border-radius: 4px; }
 
-/* ── 프로그레스바 ────────────────────────────────────────── */
+/* ── 프로그레스바 ────────────────────────────────────────────── */
 QProgressBar {
-    background: #E2E8F0;
+    background: #F3F4F6;
     border: none;
-    border-radius: 5px;
-    height: 10px;
+    border-radius: 99px;
+    height: 8px;
     text-align: right;
-    padding-right: 4px;
-    font-size: 8pt;
-    color: #475569;
+    padding-right: 2px;
+    font-size: 7.5pt;
+    color: #6B7280;
 }
-QProgressBar::chunk {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #60A5FA,stop:1 #1D4ED8);
-    border-radius: 5px;
-}
+QProgressBar::chunk { background: #2563EB; border-radius: 99px; }
 
-/* ── 스크롤바 ────────────────────────────────────────────── */
+/* ── 스크롤바 ────────────────────────────────────────────────── */
 QScrollBar:vertical {
-    background: #F1F5F9; width: 8px; border-radius: 4px; margin: 0;
+    background: transparent; width: 8px; margin: 2px;
 }
 QScrollBar::handle:vertical {
-    background: #CBD5E1; border-radius: 4px; min-height: 30px;
+    background: #D1D5DB; border-radius: 4px; min-height: 32px;
 }
-QScrollBar::handle:vertical:hover { background: #94A3B8; }
+QScrollBar::handle:vertical:hover { background: #9CA3AF; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-
 QScrollBar:horizontal {
-    background: #F1F5F9; height: 8px; border-radius: 4px; margin: 0;
+    background: transparent; height: 8px; margin: 2px;
 }
 QScrollBar::handle:horizontal {
-    background: #CBD5E1; border-radius: 4px; min-width: 30px;
+    background: #D1D5DB; border-radius: 4px; min-width: 32px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 
-/* ── 폼 레이블 ───────────────────────────────────────────── */
-QFormLayout QLabel { color: #475569; font-size: 9pt; font-weight: 600; }
+/* ── 레이블 ─────────────────────────────────────────────────── */
+QLabel { color: #111827; background: transparent; }
+QFormLayout QLabel { color: #374151; font-size: 9pt; font-weight: 600; }
 
-/* ── 달력 팝업 ───────────────────────────────────────────── */
-QCalendarWidget QWidget { background: #FFFFFF; color: #1A2233; }
+/* ── 달력 ────────────────────────────────────────────────────── */
+QCalendarWidget QWidget { background: #FFFFFF; color: #111827; }
 QCalendarWidget QAbstractItemView:enabled {
-    background: #FFFFFF; color: #1A2233;
-    selection-background-color: #1D4ED8; selection-color: #FFFFFF;
+    background: #FFFFFF; color: #111827;
+    selection-background-color: #2563EB; selection-color: #FFFFFF;
 }
-QCalendarWidget QAbstractItemView:disabled { color: #CBD5E1; }
-QCalendarWidget QToolButton { background: #003585; color: white; border-radius: 4px; }
+QCalendarWidget QAbstractItemView:disabled { color: #D1D5DB; }
+QCalendarWidget QToolButton {
+    background: #2563EB; color: #FFFFFF;
+    border: none; border-radius: 6px; padding: 4px 8px;
+}
+QCalendarWidget QMenu { background: #FFFFFF; }
+QCalendarWidget #qt_calendar_navigationbar { background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+
+/* ── 슬라이더 ────────────────────────────────────────────────── */
+QSlider::groove:horizontal {
+    background: #E5E7EB; height: 4px; border-radius: 2px;
+}
+QSlider::handle:horizontal {
+    background: #2563EB; width: 16px; height: 16px;
+    margin: -6px 0; border-radius: 8px;
+}
+QSlider::sub-page:horizontal { background: #2563EB; border-radius: 2px; }
+
+/* ── 스플리터 ────────────────────────────────────────────────── */
+QSplitter::handle { background: #E5E7EB; }
+QSplitter::handle:horizontal { width: 1px; }

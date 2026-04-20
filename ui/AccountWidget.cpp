@@ -68,8 +68,14 @@ void AccountWidget::setupUi() {
 
 void AccountWidget::refresh() {
     m_model->loadAccounts(m_userId);
-    m_view->resizeColumnsToContents();
-    m_view->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    auto* hdr = m_view->horizontalHeader();
+    hdr->setSectionResizeMode(QHeaderView::Fixed);
+    hdr->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_view->setColumnWidth(0, 50);
+    m_view->setColumnWidth(2, 160);
+    m_view->setColumnWidth(3, 140);
+    m_view->setColumnWidth(4, 80);
+    m_view->setColumnWidth(5, 150);
 }
 
 int AccountWidget::selectedAccountId() {

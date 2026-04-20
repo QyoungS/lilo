@@ -138,7 +138,15 @@ void TransactionWidget::onSearch() {
     c.category  = (m_categoryFilter->currentText() == "전체") ? "All" : m_categoryFilter->currentText();
 
     m_model->setTransactions(SearchEngine::instance().search(c));
-    m_view->resizeColumnsToContents();
+    auto* hdr = m_view->horizontalHeader();
+    hdr->setSectionResizeMode(QHeaderView::Fixed);
+    hdr->setSectionResizeMode(6, QHeaderView::Stretch);
+    m_view->setColumnWidth(0, 50);
+    m_view->setColumnWidth(1, 150);
+    m_view->setColumnWidth(2, 120);
+    m_view->setColumnWidth(3, 65);
+    m_view->setColumnWidth(4, 90);
+    m_view->setColumnWidth(5, 130);
 }
 
 void TransactionWidget::onAccountChanged(int) {
