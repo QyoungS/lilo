@@ -10,7 +10,7 @@ struct Account {
     QString number;
     double balance = 0.0;
     QString type;
-    QString currency;
+    QString currency;   // stored in DB, always KRW in UI
     QString createdAt;
 };
 
@@ -28,6 +28,8 @@ public:
     Account accountAt(int row) const;
     double totalBalance() const;
     QList<Account> accounts() const { return m_accounts; }
+
+    static QString formatKRW(double amount);
 
 private:
     QList<Account> m_accounts;
