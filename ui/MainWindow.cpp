@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QMessageBox>
 #include <QLabel>
+#include <QPushButton>
 
 MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
     : QMainWindow(parent), m_userId(userId), m_username(username)
@@ -92,6 +93,32 @@ void MainWindow::setupMenuBar() {
 void MainWindow::setupToolBar() {
     auto* tb = addToolBar("메인");
     tb->setMovable(false);
+
+    // 입금 버튼
+    auto* depositBtn = new QPushButton("입금", tb);
+    depositBtn->setStyleSheet(
+        "QPushButton { background:#F0FDF4; color:#059669; border:1px solid #A7F3D0; "
+        "border-radius:6px; padding:4px 14px; font-weight:600; font-size:9pt; min-height:28px; }"
+        "QPushButton:hover { background:#059669; color:#FFFFFF; border-color:#059669; }");
+    connect(depositBtn, &QPushButton::clicked, this, [this]() {
+        m_tabs->setCurrentWidget(m_accounts);
+        m_accounts->onDeposit();
+    });
+    tb->addWidget(depositBtn);
+
+    // 출금 버튼
+    auto* withdrawBtn = new QPushButton("출금", tb);
+    withdrawBtn->setStyleSheet(
+        "QPushButton { background:#FFFBEB; color:#D97706; border:1px solid #FDE68A; "
+        "border-radius:6px; padding:4px 14px; font-weight:600; font-size:9pt; min-height:28px; }"
+        "QPushButton:hover { background:#D97706; color:#FFFFFF; border-color:#D97706; }");
+    connect(withdrawBtn, &QPushButton::clicked, this, [this]() {
+        m_tabs->setCurrentWidget(m_accounts);
+        m_accounts->onWithdraw();
+    });
+    tb->addWidget(withdrawBtn);
+
+    tb->addSeparator();
 
     auto* transferAct = tb->addAction("이체");
     connect(transferAct, &QAction::triggered, this, [this]() {

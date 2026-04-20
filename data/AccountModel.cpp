@@ -45,7 +45,12 @@ QVariant AccountModel::data(const QModelIndex& index, int role) const {
     case 1: return a.name;
     case 2: return a.number;
     case 3: return formatKRW(a.balance);
-    case 4: return a.type;
+    case 4: {
+        static const QMap<QString,QString> t = {
+            {"Checking","입출금"},{"Savings","저축"},{"Investment","투자"},{"Cash","현금"}
+        };
+        return t.value(a.type, a.type);
+    }
     case 5: return a.createdAt;
     }
     return {};

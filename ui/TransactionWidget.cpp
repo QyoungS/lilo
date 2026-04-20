@@ -142,7 +142,7 @@ void TransactionWidget::onSearch() {
     hdr->setSectionResizeMode(QHeaderView::Fixed);
     hdr->setSectionResizeMode(6, QHeaderView::Stretch);
     m_view->setColumnWidth(0, 50);
-    m_view->setColumnWidth(1, 150);
+    m_view->setColumnWidth(1, 165);
     m_view->setColumnWidth(2, 120);
     m_view->setColumnWidth(3, 65);
     m_view->setColumnWidth(4, 90);

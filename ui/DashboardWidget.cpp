@@ -27,22 +27,27 @@
 
 // ─── 요약 카드 ───────────────────────────────────────────────
 static QGroupBox* makeSummaryCard(const QString& title, QLabel*& valLabel,
-                                  const QString& accent, QWidget* parent) {
+                                  const QString& borderColor, const QString& bgColor,
+                                  const QString& valueColor, QWidget* parent) {
     auto* box = new QGroupBox(parent);
     box->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     box->setFixedHeight(94);
     box->setStyleSheet(QString(
-        "QGroupBox { border: 1px solid #E5E7EB; border-left: 4px solid %1; "
-        "border-radius: 10px; background: #FFFFFF; margin-top: 0; }").arg(accent));
+        "QGroupBox { border:1px solid #E5E7EB; border-left:4px solid %1; "
+        "border-radius:10px; background:%2; margin-top:0; }").arg(borderColor, bgColor));
 
     auto* titleLbl = new QLabel(title, box);
-    titleLbl->setStyleSheet("color:#6B7280; font-size:8.5pt; font-weight:600; background:transparent;");
+    QFont tf("맑은 고딕", 9, QFont::DemiBold);
+    titleLbl->setFont(tf);
+    titleLbl->setStyleSheet("color:#374151; background:transparent;");
 
     valLabel = new QLabel("₩0", box);
+    QFont vf("맑은 고딕", 16, QFont::Bold);
+    valLabel->setFont(vf);
     valLabel->setStyleSheet(
-        QString("color:%1; font-size:17pt; font-weight:700; "
-                "letter-spacing:-0.5px; background:transparent;").arg(accent));
+        QString("color:%1; background:transparent; letter-spacing:-0.5px;").arg(valueColor));
     valLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    valLabel->setFixedHeight(32);
 
     auto* l = new QVBoxLayout(box);
     l->setContentsMargins(16, 10, 16, 10);
@@ -54,43 +59,41 @@ static QGroupBox* makeSummaryCard(const QString& title, QLabel*& valLabel,
 
 // ─── 환율 카드 ───────────────────────────────────────────────
 static QGroupBox* makeRateCard(const QString& code, const QString& name,
-                                const QString& flag, QLabel*& valLabel,
-                                QWidget* parent) {
+                                QLabel*& valLabel, QWidget* parent) {
     auto* box = new QGroupBox(parent);
     box->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    box->setFixedHeight(114);
     box->setStyleSheet(
-        "QGroupBox { border: 1px solid #E5E7EB; border-radius: 10px; "
-        "background: #FFFFFF; margin-top: 0; }");
-
-    auto* flagLbl = new QLabel(flag, box);
-    flagLbl->setStyleSheet("font-size:16pt; background:transparent; padding:0;");
+        "QGroupBox { border:1px solid #E5E7EB; border-radius:10px; "
+        "background:#FFFFFF; margin-top:0; }");
 
     auto* codeLbl = new QLabel(code, box);
-    codeLbl->setStyleSheet(
-        "font-size:12pt; font-weight:700; color:#111827; background:transparent;");
+    codeLbl->setFont(QFont("맑은 고딕", 13, QFont::Bold));
+    codeLbl->setStyleSheet("color:#111827; background:transparent;");
+    codeLbl->setFixedHeight(24);
 
     auto* nameLbl = new QLabel(name, box);
-    nameLbl->setStyleSheet("font-size:8pt; color:#6B7280; background:transparent;");
+    nameLbl->setFont(QFont("맑은 고딕", 8));
+    nameLbl->setStyleSheet("color:#6B7280; background:transparent;");
+    nameLbl->setFixedHeight(16);
 
     valLabel = new QLabel("—", box);
-    valLabel->setStyleSheet(
-        "font-size:14pt; font-weight:700; color:#2563EB; background:transparent;");
+    valLabel->setFont(QFont("맑은 고딕", 15, QFont::Bold));
+    valLabel->setStyleSheet("color:#2563EB; background:transparent;");
+    valLabel->setFixedHeight(28);
 
-    auto* unitLbl = new QLabel(code == "JPY" ? "100엔 기준" : "1단위 기준", box);
-    unitLbl->setStyleSheet("font-size:7.5pt; color:#9CA3AF; background:transparent;");
-
-    auto* topRow = new QHBoxLayout;
-    topRow->setSpacing(6);
-    topRow->addWidget(flagLbl);
-    topRow->addWidget(codeLbl);
-    topRow->addStretch();
+    const bool isJpy = (code == "JPY");
+    auto* unitLbl = new QLabel(isJpy ? "100엔 기준" : "1단위 기준", box);
+    unitLbl->setFont(QFont("맑은 고딕", 8));
+    unitLbl->setStyleSheet("color:#9CA3AF; background:transparent;");
+    unitLbl->setFixedHeight(14);
 
     auto* l = new QVBoxLayout(box);
-    l->setContentsMargins(14, 10, 14, 10);
-    l->setSpacing(2);
-    l->addLayout(topRow);
+    l->setContentsMargins(14, 10, 14, 8);
+    l->setSpacing(3);
+    l->addWidget(codeLbl);
     l->addWidget(nameLbl);
-    l->addSpacing(6);
+    l->addStretch();
     l->addWidget(valLabel);
     l->addWidget(unitLbl);
     return box;
@@ -118,13 +121,16 @@ void DashboardWidget::setupUi() {
     // ── 1. 요약 카드 ─────────────────────────────────────────
     auto* cardsRow = new QHBoxLayout;
     cardsRow->setSpacing(12);
-    cardsRow->addWidget(makeSummaryCard("총 자산",      m_totalBalanceLabel, "#2563EB", this));
-    cardsRow->addWidget(makeSummaryCard("이번 달 수입", m_monthIncomeLabel,  "#059669", this));
-    cardsRow->addWidget(makeSummaryCard("이번 달 지출", m_monthExpenseLabel, "#DC2626", this));
+    cardsRow->addWidget(makeSummaryCard(
+        "총 자산",      m_totalBalanceLabel, "#1565C0", "#E3F2FD", "#1565C0", this));
+    cardsRow->addWidget(makeSummaryCard(
+        "이번 달 수입", m_monthIncomeLabel,  "#2E7D32", "#E8F5E9", "#2E7D32", this));
+    cardsRow->addWidget(makeSummaryCard(
+        "이번 달 지출", m_monthExpenseLabel, "#C62828", "#FFEBEE", "#C62828", this));
     root->addLayout(cardsRow);
 
     // ── 2. 환율 섹션 ─────────────────────────────────────────
-    auto* rateGroup  = new QGroupBox("실시간 환율", this);
+    auto* rateGroup = new QGroupBox("실시간 환율", this);
     rateGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto* rateLayout = new QVBoxLayout(rateGroup);
     rateLayout->setContentsMargins(12, 8, 12, 12);
@@ -132,9 +138,10 @@ void DashboardWidget::setupUi() {
 
     auto* rateHeader = new QHBoxLayout;
     m_rateUpdateLabel = new QLabel("업데이트 중...", this);
-    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; font-size:8.5pt;");
+    m_rateUpdateLabel->setFont(QFont("맑은 고딕", 8));
+    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; background:transparent;");
     auto* refreshBtn = new QPushButton("↻ 새로고침", this);
-    refreshBtn->setFixedSize(84, 26);
+    refreshBtn->setFixedSize(86, 26);
     refreshBtn->setStyleSheet(
         "QPushButton { background:#EFF6FF; color:#2563EB; border:none; "
         "border-radius:5px; font-size:8.5pt; font-weight:600; }"
@@ -147,10 +154,10 @@ void DashboardWidget::setupUi() {
 
     auto* rateCards = new QHBoxLayout;
     rateCards->setSpacing(10);
-    rateCards->addWidget(makeRateCard("USD", "미국 달러", "🇺🇸", m_usdLabel, this));
-    rateCards->addWidget(makeRateCard("JPY", "일본 엔",   "🇯🇵", m_jpyLabel, this));
-    rateCards->addWidget(makeRateCard("EUR", "유로",      "🇪🇺", m_eurLabel, this));
-    rateCards->addWidget(makeRateCard("CNY", "중국 위안", "🇨🇳", m_cnyLabel, this));
+    rateCards->addWidget(makeRateCard("USD", "미국 달러", m_usdLabel, this));
+    rateCards->addWidget(makeRateCard("JPY", "일본 엔",   m_jpyLabel, this));
+    rateCards->addWidget(makeRateCard("EUR", "유로",      m_eurLabel, this));
+    rateCards->addWidget(makeRateCard("CNY", "중국 위안", m_cnyLabel, this));
     rateLayout->addLayout(rateCards);
     root->addWidget(rateGroup);
 
@@ -173,7 +180,7 @@ void DashboardWidget::setupUi() {
     chartRow->setSpacing(12);
     chartRow->addWidget(barGroup, 3);
     chartRow->addWidget(pieGroup, 2);
-    root->addLayout(chartRow, 1); // stretch=1 → 남은 공간 모두 차트에
+    root->addLayout(chartRow, 1);
 }
 
 void DashboardWidget::setupCharts() {
@@ -262,7 +269,8 @@ void DashboardWidget::updateBarChart() {
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->setBackgroundVisible(false);
     chart->setPlotAreaBackgroundVisible(false);
-    chart->setMargins(QMargins(4, 4, 4, 4));
+    // Y축 레이블이 잘리지 않도록 왼쪽 마진 충분히 확보
+    chart->setMargins(QMargins(20, 10, 10, 10));
 
     auto* legend = chart->legend();
     legend->setAlignment(Qt::AlignTop);
@@ -285,6 +293,8 @@ void DashboardWidget::updateBarChart() {
     axisY->setGridLineColor(QColor("#F3F4F6"));
     axisY->setLinePenColor(Qt::transparent);
     axisY->setTickCount(5);
+    // 천 단위 콤마: "10,000" 형태로 표시하기 위해 만 단위 레이블 사용
+    axisY->setLabelFormat("%'.0f");
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
 
@@ -346,7 +356,7 @@ void DashboardWidget::updatePieChart() {
 
 void DashboardWidget::fetchExchangeRates() {
     m_rateUpdateLabel->setText("환율 불러오는 중...");
-    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; font-size:8.5pt;");
+    m_rateUpdateLabel->setStyleSheet("color:#9CA3AF; background:transparent;");
     auto* nam   = new QNetworkAccessManager(this);
     auto* reply = nam->get(QNetworkRequest(QUrl("https://open.er-api.com/v6/latest/KRW")));
 
@@ -354,7 +364,7 @@ void DashboardWidget::fetchExchangeRates() {
         reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError) {
             m_rateUpdateLabel->setText("⚠ 환율 정보를 가져올 수 없습니다");
-            m_rateUpdateLabel->setStyleSheet("color:#EF4444; font-size:8.5pt;");
+            m_rateUpdateLabel->setStyleSheet("color:#EF4444; background:transparent;");
             m_usdLabel->setText("—"); m_jpyLabel->setText("—");
             m_eurLabel->setText("—"); m_cnyLabel->setText("—");
             return;
@@ -378,6 +388,6 @@ void DashboardWidget::fetchExchangeRates() {
             "● 마지막 업데이트: " +
             QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
         m_rateUpdateLabel->setStyleSheet(
-            "color:#059669; font-size:8.5pt; font-weight:600;");
+            "color:#059669; font-weight:600; background:transparent;");
     });
 }

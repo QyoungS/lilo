@@ -10,12 +10,14 @@ public:
     explicit AccountWidget(int userId, QWidget* parent = nullptr);
     void refresh();
 
+public slots:
+    void onDeposit();
+    void onWithdraw();
+
 private slots:
     void onAdd();
     void onEdit();
     void onDelete();
-    void onDeposit();
-    void onWithdraw();
 
 private:
     void setupUi();

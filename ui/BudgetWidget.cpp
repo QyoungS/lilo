@@ -14,6 +14,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QHeaderView>
+#include <QLocale>
 #include <QDebug>
 
 BudgetWidget::BudgetWidget(int userId, QWidget* parent)
@@ -83,21 +84,48 @@ void BudgetWidget::loadBudgets() {
         double  limit = q.value(2).toDouble();
         double  spent = q.value(3).toDouble();
 
+        QLocale loc(QLocale::Korean, QLocale::SouthKorea);
+        auto fmtNum = [&loc](double v) { return loc.toString((qlonglong)v); };
+
         m_table->insertRow(row);
         m_table->setItem(row, 0, new QTableWidgetItem(QString::number(id)));
         m_table->setItem(row, 1, new QTableWidgetItem(cat));
-        m_table->setItem(row, 2, new QTableWidgetItem(QString::number(limit, 'f', 0)));
-        m_table->setItem(row, 3, new QTableWidgetItem(QString::number(spent, 'f', 0)));
+
+        auto* limitItem = new QTableWidgetItem(fmtNum(limit));
+        limitItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        m_table->setItem(row, 2, limitItem);
+
+        auto* spentItem = new QTableWidgetItem(fmtNum(spent));
+        spentItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        m_table->setItem(row, 3, spentItem);
 
         auto* bar = new QProgressBar(this);
         bar->setRange(0, 100);
         int pct = limit > 0 ? int(spent / limit * 100) : 0;
         bar->setValue(qMin(pct, 100));
-        bar->setFormat(QString("%1%").arg(pct));
-        if (pct >= 100)
-            bar->setStyleSheet("QProgressBar::chunk { background: #e74c3c; }");
-        else if (pct >= 80)
-            bar->setStyleSheet("QProgressBar::chunk { background: #f39c12; }");
+
+        QString barColor;
+        QString barText;
+        if (pct >= 100) {
+            barColor = "#B71C1C";
+            barText  = QString("초과 (%1%)").arg(pct);
+        } else if (pct >= 80) {
+            barColor = "#F44336";
+            barText  = QString("%1%").arg(pct);
+        } else if (pct >= 60) {
+            barColor = "#FF9800";
+            barText  = QString("%1%").arg(pct);
+        } else {
+            barColor = "#4CAF50";
+            barText  = QString("%1%").arg(pct);
+        }
+        bar->setFormat(barText);
+        bar->setTextVisible(true);
+        bar->setStyleSheet(QString(
+            "QProgressBar { background:#F3F4F6; border:none; border-radius:99px; "
+            "height:8px; text-align:right; padding-right:4px; "
+            "font-size:7.5pt; color:#6B7280; }"
+            "QProgressBar::chunk { background:%1; border-radius:99px; }").arg(barColor));
         m_table->setCellWidget(row, 4, bar);
         ++row;
     }

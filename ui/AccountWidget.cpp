@@ -71,10 +71,10 @@ void AccountWidget::refresh() {
     auto* hdr = m_view->horizontalHeader();
     hdr->setSectionResizeMode(QHeaderView::Fixed);
     hdr->setSectionResizeMode(1, QHeaderView::Stretch);
+    hdr->setSectionResizeMode(4, QHeaderView::ResizeToContents);
     m_view->setColumnWidth(0, 50);
     m_view->setColumnWidth(2, 160);
     m_view->setColumnWidth(3, 140);
-    m_view->setColumnWidth(4, 80);
     m_view->setColumnWidth(5, 150);
 }
 
