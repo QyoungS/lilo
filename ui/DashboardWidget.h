@@ -17,11 +17,8 @@ private:
     void updateBarChart();
     void updatePieChart();
     void fetchExchangeRates();
-    void updateExchangeRateCard(const QString& code, double krwPerUnit,
-                                double krwPer100Jpy = -1);
 
-    int     m_userId;
-    QString m_username;
+    int m_userId;
 
     // 요약 카드
     QLabel* m_totalBalanceLabel;
