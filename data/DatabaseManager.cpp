@@ -1,0 +1,98 @@
+#include "DatabaseManager.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QStandardPaths>
+#include <QFileInfo>
+#include <QDir>
+#include <QDebug>
+
+DatabaseManager& DatabaseManager::instance() {
+    static DatabaseManager inst;
+    return inst;
+}
+
+DatabaseManager::DatabaseManager(QObject* parent) : QObject(parent) {}
+
+bool DatabaseManager::initialize(const QString& path) {
+    m_db = QSqlDatabase::addDatabase("QSQLITE");
+    QString dbPath = path.isEmpty()
+        ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/account_manager.db"
+        : path;
+    QDir().mkpath(QFileInfo(dbPath).absolutePath());
+    m_db.setDatabaseName(dbPath);
+
+    if (!m_db.open()) {
+        qCritical() << "DB open failed:" << m_db.lastError().text();
+        return false;
+    }
+
+    QSqlQuery q(m_db);
+    q.exec("PRAGMA journal_mode=WAL");
+    q.exec("PRAGMA foreign_keys=ON");
+
+    return createTables();
+}
+
+bool DatabaseManager::createTables() {
+    QSqlQuery q(m_db);
+    const QStringList ddl = {
+        R"(CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            number TEXT NOT NULL UNIQUE,
+            balance REAL NOT NULL DEFAULT 0.0,
+            type TEXT NOT NULL DEFAULT 'Checking',
+            currency TEXT NOT NULL DEFAULT 'KRW',
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL DEFAULT 'Other',
+            description TEXT DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS transfers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_account_id INTEGER NOT NULL REFERENCES accounts(id),
+            to_account_id INTEGER NOT NULL REFERENCES accounts(id),
+            amount REAL NOT NULL,
+            memo TEXT DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            category TEXT NOT NULL,
+            monthly_limit REAL NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            UNIQUE(user_id, category)
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            table_name TEXT NOT NULL,
+            record_id INTEGER,
+            detail TEXT DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        ))"
+    };
+
+    for (const QString& sql : ddl) {
+        if (!q.exec(sql)) {
+            qCritical() << "Table creation failed:" << q.lastError().text();
+            return false;
+        }
+    }
+    return true;
+}
