@@ -1,7 +1,10 @@
 #pragma once
 #include <QWidget>
-#include <QTableView>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QStackedWidget>
+#include <QLabel>
+#include <QFrame>
 #include "AccountModel.h"
 
 class AccountWidget : public QWidget {
@@ -14,20 +17,35 @@ public slots:
     void onDeposit();
     void onWithdraw();
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 private slots:
     void onAdd();
-    void onEdit();
-    void onDelete();
 
 private:
     void setupUi();
-    int  selectedAccountId();
+    void buildCards();
+    void buildList();
+    void setSelectedAccount(int id);
+    void doDeposit(int accountId);
+    void doWithdraw(int accountId);
+    void doEdit(int accountId);
+    void doDelete(int accountId);
+    void showAmountDialog(int accountId, bool isDeposit);
 
     int           m_userId;
-    QTableView*   m_view;
-    AccountModel* m_model;
-    QPushButton*  m_editBtn;
-    QPushButton*  m_deleteBtn;
-    QPushButton*  m_depositBtn;
-    QPushButton*  m_withdrawBtn;
+    int           m_selectedId = -1;
+    bool          m_cardMode   = true;
+    AccountModel* m_model      = nullptr;
+
+    QLabel*         m_totalLabel    = nullptr;
+    QStackedWidget* m_stack         = nullptr;
+    QScrollArea*    m_cardScroll    = nullptr;
+    QScrollArea*    m_listScroll    = nullptr;
+    QPushButton*    m_cardModeBtn   = nullptr;
+    QPushButton*    m_listModeBtn   = nullptr;
+
+    QList<QFrame*>  m_cardFrames;
+    QList<QFrame*>  m_listFrames;
 };

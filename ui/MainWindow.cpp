@@ -7,8 +7,8 @@
 #include "SettingsDialog.h"
 #include "AuthManager.h"
 #include "NotificationManager.h"
+#include "AccountModel.h"
 #include <QMenuBar>
-#include <QToolBar>
 #include <QStatusBar>
 #include <QAction>
 #include <QApplication>
@@ -16,6 +16,17 @@
 #include <QMessageBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QFrame>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QUrl>
+#include <QDateTime>
 
 MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
     : QMainWindow(parent), m_userId(userId), m_username(username)
@@ -25,12 +36,17 @@ MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
 
     NotificationManager::instance().initialize(this);
 
-    setupTabs();
+    setupSidebar();
     setupMenuBar();
-    setupToolBar();
     setupStatusBar();
 
-    // 저장된 사용자 테마 우선 로드, 없으면 기본 라이트 테마
+    // 환율 자동 갱신 타이머 (5분)
+    m_rateTimer = new QTimer(this);
+    m_rateTimer->setInterval(5 * 60 * 1000);
+    connect(m_rateTimer, &QTimer::timeout, this, &MainWindow::fetchExchangeRates);
+    m_rateTimer->start();
+    fetchExchangeRates();
+
     QString saved = SettingsDialog::loadSavedQss();
     if (!saved.isEmpty())
         qApp->setStyleSheet(saved);
@@ -38,20 +54,208 @@ MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
         applyTheme(false);
 }
 
-void MainWindow::setupTabs() {
-    m_tabs = new QTabWidget(this);
+void MainWindow::setupSidebar() {
+    auto* central = new QWidget(this);
+    auto* rootLayout = new QHBoxLayout(central);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
 
-    m_dashboard    = new DashboardWidget(m_userId, this);
-    m_accounts     = new AccountWidget(m_userId, this);
-    m_transactions = new TransactionWidget(m_userId, this);
-    m_budgets      = new BudgetWidget(m_userId, this);
+    // ── 사이드바 ──────────────────────────────────────────
+    auto* sidebar = new QWidget(central);
+    sidebar->setFixedWidth(210);
+    sidebar->setObjectName("Sidebar");
+    sidebar->setStyleSheet("QWidget#Sidebar { background: #1a1d2e; }");
 
-    m_tabs->addTab(m_dashboard,    "대시보드");
-    m_tabs->addTab(m_accounts,     "계좌");
-    m_tabs->addTab(m_transactions, "거래");
-    m_tabs->addTab(m_budgets,      "예산");
+    auto* sideLayout = new QVBoxLayout(sidebar);
+    sideLayout->setContentsMargins(14, 24, 14, 20);
+    sideLayout->setSpacing(4);
 
-    setCentralWidget(m_tabs);
+    // 앱 제목
+    auto* appTitle = new QLabel("계정 관리자", sidebar);
+    appTitle->setStyleSheet(
+        "color: #e2e8f0; font-size: 13pt; font-weight: 700; "
+        "padding: 0 4px 20px 4px;");
+    sideLayout->addWidget(appTitle);
+
+    // 구분선
+    auto* divider = new QFrame(sidebar);
+    divider->setFrameShape(QFrame::HLine);
+    divider->setStyleSheet("color: #2d3152; margin-bottom: 12px;");
+    sideLayout->addWidget(divider);
+
+    // 네비게이션 버튼
+    struct NavItem { QString icon; QString label; };
+    const QList<NavItem> items = {
+        { "▣", "대시보드" },
+        { "◈", "계좌"     },
+        { "◉", "거래"     },
+        { "◆", "예산"     },
+    };
+
+    static const QString kBtnBase =
+        "QPushButton {"
+        "  background: transparent; color: #94a3b8;"
+        "  border: none; border-radius: 8px;"
+        "  padding: 11px 14px; text-align: left;"
+        "  font-size: 10pt; font-weight: 500;"
+        "}"
+        "QPushButton:hover { background: #252840; color: #cbd5e1; }";
+
+    static const QString kBtnActive =
+        "QPushButton {"
+        "  background: #3b4168; color: #ffffff;"
+        "  border: none; border-left: 3px solid #6366f1; border-radius: 8px;"
+        "  padding: 11px 11px; text-align: left;"
+        "  font-size: 10pt; font-weight: 700;"
+        "}";
+
+    for (int i = 0; i < items.size(); ++i) {
+        auto* btn = new QPushButton(items[i].icon + "   " + items[i].label, sidebar);
+        btn->setStyleSheet(i == 0 ? kBtnActive : kBtnBase);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setFlat(true);
+        m_navBtns.append(btn);
+        sideLayout->addWidget(btn);
+        connect(btn, &QPushButton::clicked, this, [this, i]() {
+            setActivePage(i);
+        });
+    }
+
+    sideLayout->addStretch();
+
+    // ── 사이드바 하단: 환율 정보 ──────────────────────────
+    auto* rateSep = new QFrame(sidebar);
+    rateSep->setFrameShape(QFrame::HLine);
+    rateSep->setStyleSheet("color: #2d3152; margin: 6px 0;");
+    sideLayout->addWidget(rateSep);
+
+    auto* rateTitleLbl = new QLabel("실시간 환율", sidebar);
+    rateTitleLbl->setStyleSheet(
+        "color: #64748b; font-size: 8pt; font-weight: 700; "
+        "padding: 4px 4px 6px 4px;");
+    sideLayout->addWidget(rateTitleLbl);
+
+    auto* rateGrid   = new QWidget(sidebar);
+    auto* rateGridLay = new QGridLayout(rateGrid);
+    rateGridLay->setContentsMargins(4, 0, 4, 0);
+    rateGridLay->setHorizontalSpacing(8);
+    rateGridLay->setVerticalSpacing(6);
+
+    auto addRateRow = [&](int row, const QString& code, QLabel*& valueLabel,
+                          const QString& tooltip) {
+        auto* codeLbl = new QLabel(code, rateGrid);
+        codeLbl->setStyleSheet(
+            "color: #64748b; font-size: 8pt; font-weight: 600;");
+        valueLabel = new QLabel("—", rateGrid);
+        valueLabel->setStyleSheet(
+            "color: #e2e8f0; font-size: 8.5pt; font-weight: 600;");
+        valueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        valueLabel->setToolTip(tooltip);
+        rateGridLay->addWidget(codeLbl,    row, 0);
+        rateGridLay->addWidget(valueLabel, row, 1);
+    };
+
+    addRateRow(0, "USD", m_sideUsdLabel, "미국 달러 (1 USD → KRW)");
+    addRateRow(1, "JPY", m_sideJpyLabel, "일본 엔 (100 JPY → KRW)");
+    addRateRow(2, "EUR", m_sideEurLabel, "유로 (1 EUR → KRW)");
+    addRateRow(3, "CNY", m_sideCnyLabel, "중국 위안 (1 CNY → KRW)");
+    sideLayout->addWidget(rateGrid);
+
+    m_sideRateTimeLbl = new QLabel("", sidebar);
+    m_sideRateTimeLbl->setStyleSheet(
+        "color: #334155; font-size: 7pt; padding: 4px 4px 8px 4px;");
+    sideLayout->addWidget(m_sideRateTimeLbl);
+
+    // 로그인 사용자 표시
+    auto* bottomSep = new QFrame(sidebar);
+    bottomSep->setFrameShape(QFrame::HLine);
+    bottomSep->setStyleSheet("color: #2d3152; margin-bottom: 6px;");
+    sideLayout->addWidget(bottomSep);
+
+    auto* userLabel = new QLabel(QString("  %1").arg(m_username), sidebar);
+    userLabel->setStyleSheet(
+        "color: #64748b; font-size: 9pt; padding: 4px 4px 0 4px;");
+    sideLayout->addWidget(userLabel);
+
+    // ── 콘텐츠 영역 ──────────────────────────────────────
+    m_stack = new QStackedWidget(central);
+
+    m_dashboard    = new DashboardWidget(m_userId, m_stack);
+    m_accounts     = new AccountWidget(m_userId, m_stack);
+    m_transactions = new TransactionWidget(m_userId, m_stack);
+    m_budgets      = new BudgetWidget(m_userId, m_stack);
+
+    m_stack->addWidget(m_dashboard);    // index 0
+    m_stack->addWidget(m_accounts);     // index 1
+    m_stack->addWidget(m_transactions); // index 2
+    m_stack->addWidget(m_budgets);      // index 3
+
+    rootLayout->addWidget(sidebar);
+    rootLayout->addWidget(m_stack, 1);
+
+    setCentralWidget(central);
+}
+
+void MainWindow::setActivePage(int index) {
+    static const QString kBtnBase =
+        "QPushButton {"
+        "  background: transparent; color: #94a3b8;"
+        "  border: none; border-radius: 8px;"
+        "  padding: 11px 14px; text-align: left;"
+        "  font-size: 10pt; font-weight: 500;"
+        "}"
+        "QPushButton:hover { background: #252840; color: #cbd5e1; }";
+
+    static const QString kBtnActive =
+        "QPushButton {"
+        "  background: #3b4168; color: #ffffff;"
+        "  border: none; border-left: 3px solid #6366f1; border-radius: 8px;"
+        "  padding: 11px 11px; text-align: left;"
+        "  font-size: 10pt; font-weight: 700;"
+        "}";
+
+    for (int i = 0; i < m_navBtns.size(); ++i)
+        m_navBtns[i]->setStyleSheet(i == index ? kBtnActive : kBtnBase);
+
+    m_stack->setCurrentIndex(index);
+}
+
+void MainWindow::fetchExchangeRates() {
+    if (m_sideRateTimeLbl) m_sideRateTimeLbl->setText("불러오는 중...");
+
+    auto* nam   = new QNetworkAccessManager(this);
+    auto* reply = nam->get(QNetworkRequest(QUrl("https://open.er-api.com/v6/latest/KRW")));
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            if (m_sideUsdLabel) m_sideUsdLabel->setText("오류");
+            if (m_sideJpyLabel) m_sideJpyLabel->setText("오류");
+            if (m_sideEurLabel) m_sideEurLabel->setText("오류");
+            if (m_sideCnyLabel) m_sideCnyLabel->setText("오류");
+            if (m_sideRateTimeLbl)
+                m_sideRateTimeLbl->setText("⚠ 네트워크 오류");
+            return;
+        }
+
+        auto doc   = QJsonDocument::fromJson(reply->readAll());
+        auto rates = doc.object()["rates"].toObject();
+
+        auto krwPer = [&](const QString& code) -> double {
+            double r = rates[code].toDouble();
+            return r > 0 ? 1.0 / r : 0.0;
+        };
+        auto fmt = [](double v) { return AccountModel::formatKRW(qRound(v)); };
+
+        if (m_sideUsdLabel) m_sideUsdLabel->setText(fmt(krwPer("USD")));
+        if (m_sideJpyLabel) m_sideJpyLabel->setText(fmt(krwPer("JPY") * 100));
+        if (m_sideEurLabel) m_sideEurLabel->setText(fmt(krwPer("EUR")));
+        if (m_sideCnyLabel) m_sideCnyLabel->setText(fmt(krwPer("CNY")));
+
+        if (m_sideRateTimeLbl)
+            m_sideRateTimeLbl->setText(
+                QDateTime::currentDateTime().toString("HH:mm 기준"));
+    });
 }
 
 void MainWindow::setupMenuBar() {
@@ -83,57 +287,22 @@ void MainWindow::setupMenuBar() {
         dlg.exec();
     });
 
-    auto* helpMenu = menuBar()->addMenu("도움말(&H)");
-    auto* aboutAct = helpMenu->addAction("정보");
-    connect(aboutAct, &QAction::triggered, this, [this]() {
-        QMessageBox::about(this, "정보", "계정 관리자 v1.0\n과제 프로젝트 — Qt6 / C++17");
-    });
-}
-
-void MainWindow::setupToolBar() {
-    auto* tb = addToolBar("메인");
-    tb->setMovable(false);
-
-    // 입금 버튼
-    auto* depositBtn = new QPushButton("입금", tb);
-    depositBtn->setStyleSheet(
-        "QPushButton { background:#F0FDF4; color:#059669; border:1px solid #A7F3D0; "
-        "border-radius:6px; padding:4px 14px; font-weight:600; font-size:9pt; min-height:28px; }"
-        "QPushButton:hover { background:#059669; color:#FFFFFF; border-color:#059669; }");
-    connect(depositBtn, &QPushButton::clicked, this, [this]() {
-        m_tabs->setCurrentWidget(m_accounts);
-        m_accounts->onDeposit();
-    });
-    tb->addWidget(depositBtn);
-
-    // 출금 버튼
-    auto* withdrawBtn = new QPushButton("출금", tb);
-    withdrawBtn->setStyleSheet(
-        "QPushButton { background:#FFFBEB; color:#D97706; border:1px solid #FDE68A; "
-        "border-radius:6px; padding:4px 14px; font-weight:600; font-size:9pt; min-height:28px; }"
-        "QPushButton:hover { background:#D97706; color:#FFFFFF; border-color:#D97706; }");
-    connect(withdrawBtn, &QPushButton::clicked, this, [this]() {
-        m_tabs->setCurrentWidget(m_accounts);
-        m_accounts->onWithdraw();
-    });
-    tb->addWidget(withdrawBtn);
-
-    tb->addSeparator();
-
-    auto* transferAct = tb->addAction("이체");
-    connect(transferAct, &QAction::triggered, this, [this]() {
-        TransferDialog dlg(m_userId, this);
-        dlg.exec();
-    });
-
-    tb->addSeparator();
-
-    auto* refreshAct = tb->addAction("새로 고침");
+    // 새로 고침 — 보기와 도움말 사이
+    auto* refreshAct = new QAction("새로 고침(&R)", this);
+    refreshAct->setShortcut(Qt::Key_F5);
     connect(refreshAct, &QAction::triggered, this, [this]() {
         m_dashboard->refresh();
         m_accounts->refresh();
         m_transactions->refresh();
         m_budgets->refresh();
+        fetchExchangeRates();
+    });
+    menuBar()->addAction(refreshAct);
+
+    auto* helpMenu = menuBar()->addMenu("도움말(&H)");
+    auto* aboutAct = helpMenu->addAction("정보");
+    connect(aboutAct, &QAction::triggered, this, [this]() {
+        QMessageBox::about(this, "정보", "계정 관리자 v1.0\n과제 프로젝트 — Qt6 / C++17");
     });
 }
 

@@ -5,16 +5,62 @@
 #include "AccountModel.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QHeaderView>
+#include <QGridLayout>
+#include <QScrollArea>
+#include <QStackedWidget>
+#include <QFrame>
+#include <QLabel>
+#include <QPushButton>
+#include <QMenu>
 #include <QMessageBox>
 #include <QDialog>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QDoubleSpinBox>
-#include <QPushButton>
-#include <QLabel>
-#include <QWidget>
+#include <QEvent>
+#include <QMouseEvent>
+
+// ── 유형 헬퍼 ──────────────────────────────────────────────
+
+static QString typeLabel(const QString& t) {
+    static const QMap<QString, QString> m = {
+        {"Checking","입출금"}, {"Savings","저축"},
+        {"Investment","투자"}, {"Cash","현금"},
+        {"입출금","입출금"},   {"저축","저축"},
+        {"투자","투자"},       {"현금","현금"}
+    };
+    return m.value(t, t);
+}
+
+static QColor typeColor(const QString& type) {
+    const QString t = typeLabel(type);
+    if (t == "입출금") return QColor(0x3B, 0x82, 0xF6);
+    if (t == "저축")   return QColor(0x05, 0x96, 0x69);
+    if (t == "투자")   return QColor(0x8B, 0x5C, 0xF6);
+    return QColor(0xF5, 0x9E, 0x0B);
+}
+
+static QColor typeLightColor(const QString& type) {
+    const QString t = typeLabel(type);
+    if (t == "입출금") return QColor("#DBEAFE");
+    if (t == "저축")   return QColor("#D1FAE5");
+    if (t == "투자")   return QColor("#EDE9FE");
+    return QColor("#FEF3C7");
+}
+
+static QString maskNumber(const QString& num) {
+    const QStringList parts = num.split('-');
+    if (parts.size() >= 3) {
+        QString r = parts.first() + "-";
+        for (int i = 1; i < parts.size() - 1; ++i) r += "***-";
+        return r + parts.last();
+    }
+    if (num.length() > 7) return num.left(3) + "-****-" + num.right(4);
+    return num;
+}
+
+// ─────────────────────────────────────────────────────────
 
 AccountWidget::AccountWidget(int userId, QWidget* parent)
     : QWidget(parent), m_userId(userId)
@@ -29,63 +75,409 @@ AccountWidget::AccountWidget(int userId, QWidget* parent)
 }
 
 void AccountWidget::setupUi() {
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(16, 16, 16, 16);
-    root->setSpacing(10);
-
     m_model = new AccountModel(this);
-    m_view  = new QTableView(this);
-    m_view->setModel(m_model);
-    m_view->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_view->setSelectionMode(QAbstractItemView::SingleSelection);
-    m_view->horizontalHeader()->setStretchLastSection(true);
-    m_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_view->verticalHeader()->hide();
-    m_view->setAlternatingRowColors(true);
-    root->addWidget(m_view);
 
-    auto* btns    = new QHBoxLayout;
-    auto* addBtn  = new QPushButton("+ 계좌 추가", this);
-    m_editBtn     = new QPushButton("수정",   this);
-    m_deleteBtn   = new QPushButton("삭제",   this);
-    m_depositBtn  = new QPushButton("입금",   this);
-    m_withdrawBtn = new QPushButton("출금",   this);
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(20, 16, 20, 16);
+    root->setSpacing(14);
 
-    btns->addWidget(addBtn);
-    btns->addWidget(m_editBtn);
-    btns->addWidget(m_deleteBtn);
-    btns->addStretch();
-    btns->addWidget(m_depositBtn);
-    btns->addWidget(m_withdrawBtn);
-    root->addLayout(btns);
+    // ── 상단 바 ──────────────────────────────────────────
+    auto* topBar = new QHBoxLayout;
+    topBar->setSpacing(10);
 
-    connect(addBtn,        &QPushButton::clicked, this, &AccountWidget::onAdd);
-    connect(m_editBtn,     &QPushButton::clicked, this, &AccountWidget::onEdit);
-    connect(m_deleteBtn,   &QPushButton::clicked, this, &AccountWidget::onDelete);
-    connect(m_depositBtn,  &QPushButton::clicked, this, &AccountWidget::onDeposit);
-    connect(m_withdrawBtn, &QPushButton::clicked, this, &AccountWidget::onWithdraw);
+    auto* titleLbl = new QLabel("계좌 관리", this);
+    titleLbl->setFont(QFont("맑은 고딕", 14, QFont::Bold));
+    titleLbl->setStyleSheet("color:#111827;");
+
+    auto* totalCap = new QLabel("총 자산", this);
+    totalCap->setFont(QFont("맑은 고딕", 8));
+    totalCap->setStyleSheet("color:#6B7280;");
+
+    m_totalLabel = new QLabel("₩0", this);
+    m_totalLabel->setFont(QFont("맑은 고딕", 12, QFont::DemiBold));
+    m_totalLabel->setStyleSheet("color:#1D4ED8;");
+
+    auto* addBtn = new QPushButton("+ 계좌 추가", this);
+    addBtn->setFixedHeight(34);
+    addBtn->setStyleSheet(
+        "QPushButton{background:#3B82F6;color:#fff;border:none;border-radius:8px;"
+        "font-size:9pt;font-weight:600;padding:0 16px;}"
+        "QPushButton:hover{background:#2563EB;}");
+
+    // 뷰 전환 토글
+    auto* toggleFr = new QFrame(this);
+    toggleFr->setStyleSheet("QFrame{background:#F3F4F6;border-radius:8px;border:none;}");
+    toggleFr->setFixedHeight(34);
+    auto* tgl = new QHBoxLayout(toggleFr);
+    tgl->setContentsMargins(3, 3, 3, 3);
+    tgl->setSpacing(2);
+
+    m_cardModeBtn = new QPushButton("⊞", toggleFr);
+    m_listModeBtn = new QPushButton("≡", toggleFr);
+    m_cardModeBtn->setFixedHeight(28);
+    m_listModeBtn->setFixedHeight(28);
+    m_cardModeBtn->setFont(QFont("Segoe UI", 11));
+    m_listModeBtn->setFont(QFont("Segoe UI", 11));
+    tgl->addWidget(m_cardModeBtn);
+    tgl->addWidget(m_listModeBtn);
+
+    topBar->addWidget(titleLbl);
+    topBar->addStretch();
+    topBar->addWidget(totalCap);
+    topBar->addWidget(m_totalLabel);
+    topBar->addSpacing(12);
+    topBar->addWidget(addBtn);
+    topBar->addWidget(toggleFr);
+    root->addLayout(topBar);
+
+    // ── 스택 (카드 / 리스트) ──────────────────────────────
+    m_stack = new QStackedWidget(this);
+
+    m_cardScroll = new QScrollArea(this);
+    m_cardScroll->setWidgetResizable(true);
+    m_cardScroll->setFrameShape(QFrame::NoFrame);
+    m_cardScroll->setStyleSheet("QScrollArea{background:transparent;border:none;}");
+
+    m_listScroll = new QScrollArea(this);
+    m_listScroll->setWidgetResizable(true);
+    m_listScroll->setFrameShape(QFrame::NoFrame);
+    m_listScroll->setStyleSheet("QScrollArea{background:transparent;border:none;}");
+
+    m_stack->addWidget(m_cardScroll);   // 0 = 카드
+    m_stack->addWidget(m_listScroll);   // 1 = 리스트
+    root->addWidget(m_stack, 1);
+
+    // ── 시그널 연결 ───────────────────────────────────────
+    connect(addBtn, &QPushButton::clicked, this, &AccountWidget::onAdd);
+
+    auto updateToggle = [this]() {
+        const char* on  =
+            "QPushButton{background:#fff;color:#1D4ED8;border:none;"
+            "border-radius:6px;padding:0 10px;}"
+            "QPushButton:hover{background:#F0F9FF;}";
+        const char* off =
+            "QPushButton{background:transparent;color:#6B7280;border:none;"
+            "border-radius:6px;padding:0 10px;}"
+            "QPushButton:hover{background:#E5E7EB;}";
+        m_cardModeBtn->setStyleSheet(m_cardMode ? on : off);
+        m_listModeBtn->setStyleSheet(m_cardMode ? off : on);
+    };
+    updateToggle();
+
+    connect(m_cardModeBtn, &QPushButton::clicked, this, [this, updateToggle]() {
+        m_cardMode = true;
+        m_stack->setCurrentIndex(0);
+        updateToggle();
+    });
+    connect(m_listModeBtn, &QPushButton::clicked, this, [this, updateToggle]() {
+        m_cardMode = false;
+        m_stack->setCurrentIndex(1);
+        updateToggle();
+    });
 }
+
+// ── 카드 뷰 ───────────────────────────────────────────────
+
+void AccountWidget::buildCards() {
+    delete m_cardScroll->takeWidget();
+    m_cardFrames.clear();
+
+    auto* container = new QWidget;
+    container->setStyleSheet("background:transparent;");
+    auto* grid = new QGridLayout(container);
+    grid->setContentsMargins(4, 4, 4, 4);
+    grid->setSpacing(16);
+    grid->setColumnStretch(0, 1);
+    grid->setColumnStretch(1, 1);
+    grid->setColumnStretch(2, 1);
+
+    const int count = m_model->rowCount();
+
+    if (count == 0) {
+        auto* empty = new QLabel("계좌가 없습니다.\n\n+ 계좌 추가 버튼으로 시작해보세요.", container);
+        empty->setAlignment(Qt::AlignCenter);
+        empty->setStyleSheet("color:#9CA3AF;font-size:11pt;");
+        empty->setMinimumHeight(200);
+        grid->addWidget(empty, 0, 0, 1, 3);
+    }
+
+    for (int i = 0; i < count; ++i) {
+        const Account a   = m_model->accountAt(i);
+        const QColor  tc  = typeColor(a.type);
+        const bool    sel = (a.id == m_selectedId);
+
+        auto* card = new QFrame(container);
+        card->setProperty("accountId", a.id);
+        card->setCursor(Qt::PointingHandCursor);
+        card->setMinimumHeight(185);
+        card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        card->setStyleSheet(sel
+            ? "QFrame{border:2px solid #3B82F6;border-radius:14px;background:#EFF6FF;}"
+            : "QFrame{border:1.5px solid #E5E7EB;border-radius:14px;background:#FFFFFF;}");
+        card->installEventFilter(this);
+        m_cardFrames.append(card);
+
+        auto* vl = new QVBoxLayout(card);
+        vl->setContentsMargins(16, 14, 16, 12);
+        vl->setSpacing(0);
+
+        // 헤더: 유형 배지 + 계좌명
+        auto* hdr = new QHBoxLayout;
+        hdr->setSpacing(8);
+
+        auto* badge = new QLabel(typeLabel(a.type), card);
+        badge->setFixedHeight(22);
+        badge->setAlignment(Qt::AlignCenter);
+        badge->setStyleSheet(QString(
+            "color:white;background:%1;border-radius:5px;"
+            "font-size:8pt;font-weight:600;padding:0 7px;"
+        ).arg(tc.name()));
+
+        auto* nameLbl = new QLabel(a.name, card);
+        nameLbl->setFont(QFont("맑은 고딕", 11, QFont::Bold));
+        nameLbl->setStyleSheet("color:#111827;background:transparent;");
+        nameLbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+        hdr->addWidget(badge);
+        hdr->addWidget(nameLbl, 1);
+        vl->addLayout(hdr);
+        vl->addSpacing(8);
+
+        // 계좌번호
+        auto* numLbl = new QLabel(maskNumber(a.number), card);
+        numLbl->setFont(QFont("맑은 고딕", 8));
+        numLbl->setStyleSheet("color:#9CA3AF;background:transparent;");
+        vl->addWidget(numLbl);
+
+        vl->addStretch();
+
+        // 잔액
+        auto* balLbl = new QLabel(AccountModel::formatKRW(a.balance), card);
+        balLbl->setFont(QFont("맑은 고딕", 16, QFont::Bold));
+        balLbl->setStyleSheet(QString(
+            "color:%1;background:transparent;letter-spacing:-0.5px;"
+        ).arg(a.balance >= 0 ? "#1D4ED8" : "#DC2626"));
+        balLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        vl->addWidget(balLbl);
+        vl->addSpacing(10);
+
+        // 액션 버튼
+        auto* act = new QHBoxLayout;
+        act->setSpacing(6);
+
+        auto mkBtn = [&](const QString& text, const QString& bg, const QString& fg) {
+            auto* b = new QPushButton(text, card);
+            b->setFixedHeight(30);
+            b->setCursor(Qt::PointingHandCursor);
+            b->setStyleSheet(QString(
+                "QPushButton{background:%1;color:%2;border:none;border-radius:7px;"
+                "font-size:8.5pt;font-weight:600;}"
+                "QPushButton:hover{filter:brightness(0.95);}"
+            ).arg(bg, fg));
+            return b;
+        };
+
+        const int aid = a.id;
+        auto* depBtn  = mkBtn("입금",  "#ECFDF5", "#059669");
+        auto* withBtn = mkBtn("출금",  "#FEF2F2", "#DC2626");
+        auto* moreBtn = mkBtn("···",   "#F3F4F6", "#374151");
+        moreBtn->setFixedWidth(38);
+
+        connect(depBtn,  &QPushButton::clicked, this, [this, aid]() { doDeposit(aid);  });
+        connect(withBtn, &QPushButton::clicked, this, [this, aid]() { doWithdraw(aid); });
+        connect(moreBtn, &QPushButton::clicked, this, [this, moreBtn, aid]() {
+            QMenu m(this);
+            m.addAction("수정", [this, aid]() { doEdit(aid); });
+            m.addSeparator();
+            m.addAction("삭제", [this, aid]() { doDelete(aid); });
+            m.exec(moreBtn->mapToGlobal(moreBtn->rect().bottomLeft()));
+        });
+
+        act->addWidget(depBtn, 1);
+        act->addWidget(withBtn, 1);
+        act->addWidget(moreBtn);
+        vl->addLayout(act);
+
+        grid->addWidget(card, i / 3, i % 3);
+    }
+
+    if (count > 0)
+        grid->setRowStretch((count - 1) / 3 + 1, 1);
+
+    m_cardScroll->setWidget(container);
+}
+
+// ── 리스트 뷰 ─────────────────────────────────────────────
+
+void AccountWidget::buildList() {
+    delete m_listScroll->takeWidget();
+    m_listFrames.clear();
+
+    auto* container = new QWidget;
+    container->setStyleSheet("background:transparent;");
+    auto* vl = new QVBoxLayout(container);
+    vl->setContentsMargins(4, 4, 4, 4);
+    vl->setSpacing(8);
+
+    const int count = m_model->rowCount();
+
+    if (count == 0) {
+        auto* empty = new QLabel("계좌가 없습니다.", container);
+        empty->setAlignment(Qt::AlignCenter);
+        empty->setStyleSheet("color:#9CA3AF;font-size:11pt;");
+        empty->setFixedHeight(100);
+        vl->addWidget(empty);
+    }
+
+    for (int i = 0; i < count; ++i) {
+        const Account a   = m_model->accountAt(i);
+        const QColor  tc  = typeColor(a.type);
+        const QColor  tlc = typeLightColor(a.type);
+        const bool    sel = (a.id == m_selectedId);
+
+        auto* row = new QFrame(container);
+        row->setProperty("accountId", a.id);
+        row->setCursor(Qt::PointingHandCursor);
+        row->setFixedHeight(72);
+        row->setStyleSheet(sel
+            ? "QFrame{border:1px solid #93C5FD;border-radius:10px;background:#EFF6FF;}"
+            : "QFrame{border:1px solid #F3F4F6;border-radius:10px;background:#FFFFFF;}");
+        row->installEventFilter(this);
+        m_listFrames.append(row);
+
+        auto* hl = new QHBoxLayout(row);
+        hl->setContentsMargins(14, 10, 12, 10);
+        hl->setSpacing(12);
+
+        // 유형 아이콘 (QLabel — QFrame 대신 사용하여 스타일 충돌 방지)
+        auto* iconLbl = new QLabel(typeLabel(a.type).left(2), row);
+        iconLbl->setFixedSize(44, 44);
+        iconLbl->setAlignment(Qt::AlignCenter);
+        iconLbl->setFont(QFont("맑은 고딕", 9, QFont::Bold));
+        iconLbl->setStyleSheet(QString(
+            "color:%1;background:%2;border-radius:10px;"
+        ).arg(tc.name(), tlc.name()));
+        hl->addWidget(iconLbl);
+
+        // 계좌명 + 번호
+        auto* infoW = new QWidget(row);
+        infoW->setStyleSheet("background:transparent;");
+        auto* infoV = new QVBoxLayout(infoW);
+        infoV->setContentsMargins(0, 0, 0, 0);
+        infoV->setSpacing(2);
+
+        auto* nameLbl = new QLabel(a.name, infoW);
+        nameLbl->setFont(QFont("맑은 고딕", 10, QFont::Bold));
+        nameLbl->setStyleSheet("color:#111827;background:transparent;");
+
+        auto* numLbl = new QLabel(maskNumber(a.number), infoW);
+        numLbl->setFont(QFont("맑은 고딕", 8));
+        numLbl->setStyleSheet("color:#9CA3AF;background:transparent;");
+
+        infoV->addWidget(nameLbl);
+        infoV->addWidget(numLbl);
+        hl->addWidget(infoW, 1);
+
+        // 잔액
+        auto* balLbl = new QLabel(AccountModel::formatKRW(a.balance), row);
+        balLbl->setFont(QFont("맑은 고딕", 12, QFont::Bold));
+        balLbl->setStyleSheet(QString(
+            "color:%1;background:transparent;letter-spacing:-0.5px;"
+        ).arg(a.balance >= 0 ? "#1D4ED8" : "#DC2626"));
+        balLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        balLbl->setMinimumWidth(120);
+        hl->addWidget(balLbl);
+
+        // 액션 버튼
+        auto mkRowBtn = [&](const QString& text, const QString& bg, const QString& fg) {
+            auto* b = new QPushButton(text, row);
+            b->setFixedSize(46, 30);
+            b->setCursor(Qt::PointingHandCursor);
+            b->setStyleSheet(QString(
+                "QPushButton{background:%1;color:%2;border:none;border-radius:7px;"
+                "font-size:8.5pt;font-weight:600;}"
+            ).arg(bg, fg));
+            return b;
+        };
+
+        const int aid = a.id;
+        auto* depBtn  = mkRowBtn("입금",  "#ECFDF5", "#059669");
+        auto* withBtn = mkRowBtn("출금",  "#FEF2F2", "#DC2626");
+        auto* moreBtn = mkRowBtn("···",   "#F3F4F6", "#6B7280");
+        moreBtn->setFixedWidth(34);
+
+        connect(depBtn,  &QPushButton::clicked, this, [this, aid]() { doDeposit(aid);  });
+        connect(withBtn, &QPushButton::clicked, this, [this, aid]() { doWithdraw(aid); });
+        connect(moreBtn, &QPushButton::clicked, this, [this, moreBtn, aid]() {
+            QMenu m(this);
+            m.addAction("수정", [this, aid]() { doEdit(aid); });
+            m.addSeparator();
+            m.addAction("삭제", [this, aid]() { doDelete(aid); });
+            m.exec(moreBtn->mapToGlobal(moreBtn->rect().bottomLeft()));
+        });
+
+        hl->addWidget(depBtn);
+        hl->addWidget(withBtn);
+        hl->addWidget(moreBtn);
+        vl->addWidget(row);
+    }
+
+    vl->addStretch();
+    m_listScroll->setWidget(container);
+}
+
+// ── 선택 상태 ─────────────────────────────────────────────
+
+void AccountWidget::setSelectedAccount(int id) {
+    m_selectedId = id;
+
+    for (auto* f : m_cardFrames) {
+        const bool sel = (f->property("accountId").toInt() == id);
+        f->setStyleSheet(sel
+            ? "QFrame{border:2px solid #3B82F6;border-radius:14px;background:#EFF6FF;}"
+            : "QFrame{border:1.5px solid #E5E7EB;border-radius:14px;background:#FFFFFF;}");
+    }
+    for (auto* f : m_listFrames) {
+        const bool sel = (f->property("accountId").toInt() == id);
+        f->setStyleSheet(sel
+            ? "QFrame{border:1px solid #93C5FD;border-radius:10px;background:#EFF6FF;}"
+            : "QFrame{border:1px solid #F3F4F6;border-radius:10px;background:#FFFFFF;}");
+    }
+}
+
+bool AccountWidget::eventFilter(QObject* obj, QEvent* event) {
+    if (event->type() == QEvent::MouseButtonPress) {
+        const QVariant prop = obj->property("accountId");
+        if (prop.isValid()) setSelectedAccount(prop.toInt());
+    }
+    return QWidget::eventFilter(obj, event);
+}
+
+// ── refresh ───────────────────────────────────────────────
 
 void AccountWidget::refresh() {
     m_model->loadAccounts(m_userId);
-    auto* hdr = m_view->horizontalHeader();
-    hdr->setSectionResizeMode(QHeaderView::Fixed);
-    hdr->setSectionResizeMode(1, QHeaderView::Stretch);
-    hdr->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-    m_view->setColumnWidth(0, 50);
-    m_view->setColumnWidth(2, 160);
-    m_view->setColumnWidth(3, 140);
-    m_view->setColumnWidth(5, 150);
+    m_totalLabel->setText(AccountModel::formatKRW(m_model->totalBalance()));
+    buildCards();
+    buildList();
 }
 
-int AccountWidget::selectedAccountId() {
-    auto idx = m_view->selectionModel()->currentIndex();
-    if (!idx.isValid()) return -1;
-    return m_model->accountAt(idx.row()).id;
+// ── 공개 슬롯 (외부 호출용) ───────────────────────────────
+
+void AccountWidget::onDeposit() {
+    if (m_selectedId < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
+    doDeposit(m_selectedId);
 }
+
+void AccountWidget::onWithdraw() {
+    if (m_selectedId < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
+    doWithdraw(m_selectedId);
+}
+
+// ── 계좌 추가 ─────────────────────────────────────────────
 
 void AccountWidget::onAdd() {
-    auto* dlg  = new QDialog(this);
+    auto* dlg = new QDialog(this);
     dlg->setWindowTitle("계좌 추가");
     dlg->setMinimumWidth(340);
     auto* form = new QFormLayout(dlg);
@@ -99,14 +491,13 @@ void AccountWidget::onAdd() {
     auto* typeBox  = new QComboBox(dlg);
     typeBox->addItems({"입출금", "저축", "투자", "현금"});
 
-    // 통화는 KRW 고정 — 선택 UI 제거
     auto* currencyLbl = new QLabel("₩ KRW (대한민국 원)", dlg);
-    currencyLbl->setStyleSheet("color:#64748B; font-size:9pt;");
+    currencyLbl->setStyleSheet("color:#64748B;font-size:9pt;");
 
-    form->addRow("계좌명:", nameEdit);
+    form->addRow("계좌명:",   nameEdit);
     form->addRow("계좌번호:", numEdit);
-    form->addRow("유형:", typeBox);
-    form->addRow("통화:", currencyLbl);
+    form->addRow("유형:",     typeBox);
+    form->addRow("통화:",     currencyLbl);
 
     auto* btns = new QHBoxLayout;
     auto* ok   = new QPushButton("생성", dlg);
@@ -132,57 +523,13 @@ void AccountWidget::onAdd() {
     dlg->deleteLater();
 }
 
-void AccountWidget::onEdit() {
-    int id = selectedAccountId();
-    if (id < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
+// ── 내부 액션 ─────────────────────────────────────────────
 
-    Account a  = AccountManager::instance().getAccount(id);
-    auto* dlg  = new QDialog(this);
-    dlg->setWindowTitle("계좌 수정");
-    dlg->setMinimumWidth(320);
-    auto* form = new QFormLayout(dlg);
-    form->setSpacing(12);
-    form->setContentsMargins(20, 20, 20, 20);
+void AccountWidget::doDeposit(int accountId)  { showAmountDialog(accountId, true);  }
+void AccountWidget::doWithdraw(int accountId) { showAmountDialog(accountId, false); }
 
-    auto* nameEdit = new QLineEdit(a.name, dlg);
-    auto* typeBox  = new QComboBox(dlg);
-    typeBox->addItems({"입출금", "저축", "투자", "현금"});
-    typeBox->setCurrentText(a.type);
-
-    form->addRow("계좌명:", nameEdit);
-    form->addRow("유형:", typeBox);
-
-    auto* btns = new QHBoxLayout;
-    auto* ok   = new QPushButton("저장", dlg);
-    auto* can  = new QPushButton("취소", dlg);
-    btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
-    form->addRow(btns);
-
-    connect(can, &QPushButton::clicked, dlg, &QDialog::reject);
-    connect(ok,  &QPushButton::clicked, dlg, [=]() {
-        if (!ValidationHelper::isNotEmpty(nameEdit->text())) {
-            QMessageBox::warning(dlg, "오류", "계좌명을 입력하세요."); return;
-        }
-        AccountManager::instance().updateAccount(id, nameEdit->text(), typeBox->currentText(), "KRW");
-        dlg->accept();
-    });
-    dlg->exec();
-    dlg->deleteLater();
-}
-
-void AccountWidget::onDelete() {
-    int id = selectedAccountId();
-    if (id < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
-
-    if (QMessageBox::question(this, "계좌 삭제",
-            "이 계좌와 모든 거래 내역을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")
-            == QMessageBox::Yes) {
-        AccountManager::instance().deleteAccount(id);
-    }
-}
-
-static void showAmountDialog(QWidget* parent, int accountId, bool isDeposit, int userId) {
-    auto* dlg  = new QDialog(parent);
+void AccountWidget::showAmountDialog(int accountId, bool isDeposit) {
+    auto* dlg = new QDialog(this);
     dlg->setWindowTitle(isDeposit ? "입금" : "출금");
     dlg->setMinimumWidth(320);
     auto* form = new QFormLayout(dlg);
@@ -201,9 +548,9 @@ static void showAmountDialog(QWidget* parent, int accountId, bool isDeposit, int
     auto* descEdit = new QLineEdit(dlg);
     descEdit->setPlaceholderText("거래 설명 (선택사항)");
 
-    form->addRow("금액:", amtSpin);
-    form->addRow("카테고리:", catBox);
-    form->addRow("설명:", descEdit);
+    form->addRow("금액:",       amtSpin);
+    form->addRow("카테고리:",   catBox);
+    form->addRow("설명:",       descEdit);
 
     auto* btns = new QHBoxLayout;
     auto* ok   = new QPushButton(isDeposit ? "입금" : "출금", dlg);
@@ -211,11 +558,11 @@ static void showAmountDialog(QWidget* parent, int accountId, bool isDeposit, int
     btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
     form->addRow(btns);
 
-    QObject::connect(can, &QPushButton::clicked, dlg, &QDialog::reject);
-    QObject::connect(ok,  &QPushButton::clicked, dlg, [=]() {
-        double amt = amtSpin->value();
-        bool ok2 = isDeposit
-            ? TransactionManager::instance().deposit(accountId, amt, catBox->currentText(), descEdit->text())
+    connect(can, &QPushButton::clicked, dlg, &QDialog::reject);
+    connect(ok,  &QPushButton::clicked, dlg, [=]() {
+        const double amt = amtSpin->value();
+        const bool ok2   = isDeposit
+            ? TransactionManager::instance().deposit( accountId, amt, catBox->currentText(), descEdit->text())
             : TransactionManager::instance().withdraw(accountId, amt, catBox->currentText(), descEdit->text());
         if (!ok2)
             QMessageBox::warning(dlg, "오류", isDeposit ? "입금에 실패했습니다." : "잔액이 부족합니다.");
@@ -226,14 +573,46 @@ static void showAmountDialog(QWidget* parent, int accountId, bool isDeposit, int
     dlg->deleteLater();
 }
 
-void AccountWidget::onDeposit() {
-    int id = selectedAccountId();
-    if (id < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
-    showAmountDialog(this, id, true, m_userId);
+void AccountWidget::doEdit(int accountId) {
+    const Account a = AccountManager::instance().getAccount(accountId);
+    auto* dlg = new QDialog(this);
+    dlg->setWindowTitle("계좌 수정");
+    dlg->setMinimumWidth(320);
+    auto* form = new QFormLayout(dlg);
+    form->setSpacing(12);
+    form->setContentsMargins(20, 20, 20, 20);
+
+    auto* nameEdit = new QLineEdit(a.name, dlg);
+    auto* typeBox  = new QComboBox(dlg);
+    typeBox->addItems({"입출금", "저축", "투자", "현금"});
+    typeBox->setCurrentText(typeLabel(a.type));
+
+    form->addRow("계좌명:", nameEdit);
+    form->addRow("유형:",   typeBox);
+
+    auto* btns = new QHBoxLayout;
+    auto* ok   = new QPushButton("저장", dlg);
+    auto* can  = new QPushButton("취소", dlg);
+    btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
+    form->addRow(btns);
+
+    connect(can, &QPushButton::clicked, dlg, &QDialog::reject);
+    connect(ok,  &QPushButton::clicked, dlg, [=]() {
+        if (!ValidationHelper::isNotEmpty(nameEdit->text())) {
+            QMessageBox::warning(dlg, "오류", "계좌명을 입력하세요."); return;
+        }
+        AccountManager::instance().updateAccount(accountId, nameEdit->text(), typeBox->currentText(), "KRW");
+        dlg->accept();
+    });
+    dlg->exec();
+    dlg->deleteLater();
 }
 
-void AccountWidget::onWithdraw() {
-    int id = selectedAccountId();
-    if (id < 0) { QMessageBox::information(this, "선택", "계좌를 선택하세요."); return; }
-    showAmountDialog(this, id, false, m_userId);
+void AccountWidget::doDelete(int accountId) {
+    if (QMessageBox::question(this, "계좌 삭제",
+            "이 계좌와 모든 거래 내역을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")
+            == QMessageBox::Yes) {
+        AccountManager::instance().deleteAccount(accountId);
+        if (m_selectedId == accountId) m_selectedId = -1;
+    }
 }
