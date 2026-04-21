@@ -188,7 +188,7 @@ void TransactionWidget::setupUi() {
     auto* filterBox = new QGroupBox("검색 / 필터", this);
     auto* grid = new QGridLayout(filterBox);
     grid->setContentsMargins(10, 14, 10, 10);
-    grid->setHorizontalSpacing(0);
+    grid->setHorizontalSpacing(2);
     grid->setVerticalSpacing(8);
 
     static const QString kComboStyle =
@@ -276,11 +276,11 @@ void TransactionWidget::setupUi() {
         return c;
     };
 
-    // row 0: 계좌, 유형, 카테고리, 키워드
+    // row 0: 계좌(1), 유형(1), 카테고리(2), 키워드(2)
     grid->addWidget(makeItem("계좌:",     m_accountCombo),  0, 0, 1, 1);
-    grid->addWidget(makeItem("유형:",     m_typeFilter),    0, 2, 1, 1);
-    grid->addWidget(makeItem("카테고리:", m_categoryFilter),0, 3, 1, 2);
-    grid->addWidget(makeItem("키워드:",   m_keywordEdit),   0, 5, 1, 1);
+    grid->addWidget(makeItem("유형:",     m_typeFilter),    0, 1, 1, 1);
+    grid->addWidget(makeItem("카테고리:", m_categoryFilter),0, 2, 1, 2);
+    grid->addWidget(makeItem("키워드:",   m_keywordEdit),   0, 4, 1, 2);
 
     // row 1: 시작일, 종료일, 최소금액, 최대금액, 검색/초기화
     grid->addWidget(makeItem("시작일:",    makeCalendarPicker(m_startDate, this)), 1, 0);
