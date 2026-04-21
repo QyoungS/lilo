@@ -188,7 +188,7 @@ void TransactionWidget::setupUi() {
     auto* filterBox = new QGroupBox("검색 / 필터", this);
     auto* grid = new QGridLayout(filterBox);
     grid->setContentsMargins(10, 14, 10, 10);
-    grid->setHorizontalSpacing(10);
+    grid->setHorizontalSpacing(0);
     grid->setVerticalSpacing(8);
 
     static const QString kComboStyle =
