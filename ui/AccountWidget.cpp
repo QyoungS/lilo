@@ -212,14 +212,9 @@ void AccountWidget::buildCards() {
         card->setCursor(Qt::PointingHandCursor);
         card->setMinimumHeight(210);
         card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        // 왼쪽 4px 컬러 스트라이프, 나머지 테두리는 연한 회색
         card->setStyleSheet(sel
-            ? QString("QFrame{border:1px solid #BFDBFE;"
-                      "border-left:4px solid %1;"
-                      "border-radius:12px;background:#F8FAFF;}").arg(tc.name())
-            : QString("QFrame{border:1px solid #E5E7EB;"
-                      "border-left:4px solid %1;"
-                      "border-radius:12px;background:#FFFFFF;}").arg(tc.name()));
+            ? "QFrame{border:2px solid #3B82F6;border-radius:12px;background:#F8FAFF;}"
+            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
         card->installEventFilter(this);
         m_cardFrames.append(card);
 
@@ -465,19 +460,10 @@ void AccountWidget::setSelectedAccount(int id) {
     m_selectedId = id;
 
     for (auto* f : m_cardFrames) {
-        const int  aid = f->property("accountId").toInt();
-        const bool sel = (aid == id);
-        int idx = -1;
-        for (int i = 0; i < m_model->rowCount(); ++i)
-            if (m_model->accountAt(i).id == aid) { idx = i; break; }
-        const QString tc = idx >= 0 ? typeColor(m_model->accountAt(idx).type).name() : "#3B82F6";
+        const bool sel = (f->property("accountId").toInt() == id);
         f->setStyleSheet(sel
-            ? QString("QFrame{border:1px solid #BFDBFE;"
-                      "border-left:4px solid %1;"
-                      "border-radius:12px;background:#F8FAFF;}").arg(tc)
-            : QString("QFrame{border:1px solid #E5E7EB;"
-                      "border-left:4px solid %1;"
-                      "border-radius:12px;background:#FFFFFF;}").arg(tc));
+            ? "QFrame{border:2px solid #3B82F6;border-radius:12px;background:#F8FAFF;}"
+            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
     }
     for (auto* f : m_listFrames) {
         const bool sel = (f->property("accountId").toInt() == id);
@@ -521,10 +507,10 @@ void AccountWidget::onWithdraw() {
 void AccountWidget::onAdd() {
     auto* dlg = new QDialog(this);
     dlg->setWindowTitle("계좌 추가");
-    dlg->setMinimumWidth(340);
+    dlg->setMinimumWidth(400);
     auto* form = new QFormLayout(dlg);
-    form->setSpacing(12);
-    form->setContentsMargins(20, 20, 20, 20);
+    form->setSpacing(14);
+    form->setContentsMargins(24, 24, 24, 24);
 
     auto* nameEdit = new QLineEdit(dlg);
     nameEdit->setPlaceholderText("예: 주거래 통장");
@@ -542,8 +528,11 @@ void AccountWidget::onAdd() {
     form->addRow("통화:",     currencyLbl);
 
     auto* btns = new QHBoxLayout;
+    btns->setSpacing(8);
     auto* ok   = new QPushButton("생성", dlg);
     auto* can  = new QPushButton("취소", dlg);
+    ok->setFixedHeight(36);
+    can->setFixedHeight(36);
     btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
     form->addRow(btns);
 
@@ -579,10 +568,10 @@ void AccountWidget::doTransfer(int accountId) {
 void AccountWidget::showAmountDialog(int accountId, bool isDeposit) {
     auto* dlg = new QDialog(this);
     dlg->setWindowTitle(isDeposit ? "입금" : "출금");
-    dlg->setMinimumWidth(320);
+    dlg->setMinimumWidth(400);
     auto* form = new QFormLayout(dlg);
-    form->setSpacing(12);
-    form->setContentsMargins(20, 20, 20, 20);
+    form->setSpacing(14);
+    form->setContentsMargins(24, 24, 24, 24);
 
     auto* amtSpin = new QDoubleSpinBox(dlg);
     amtSpin->setRange(1, 1e12);
@@ -601,8 +590,11 @@ void AccountWidget::showAmountDialog(int accountId, bool isDeposit) {
     form->addRow("설명:",       descEdit);
 
     auto* btns = new QHBoxLayout;
+    btns->setSpacing(8);
     auto* ok   = new QPushButton(isDeposit ? "입금" : "출금", dlg);
     auto* can  = new QPushButton("취소", dlg);
+    ok->setFixedHeight(36);
+    can->setFixedHeight(36);
     btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
     form->addRow(btns);
 
@@ -625,10 +617,10 @@ void AccountWidget::doEdit(int accountId) {
     const Account a = AccountManager::instance().getAccount(accountId);
     auto* dlg = new QDialog(this);
     dlg->setWindowTitle("계좌 수정");
-    dlg->setMinimumWidth(320);
+    dlg->setMinimumWidth(400);
     auto* form = new QFormLayout(dlg);
-    form->setSpacing(12);
-    form->setContentsMargins(20, 20, 20, 20);
+    form->setSpacing(14);
+    form->setContentsMargins(24, 24, 24, 24);
 
     auto* nameEdit = new QLineEdit(a.name, dlg);
     auto* typeBox  = new QComboBox(dlg);
@@ -639,8 +631,11 @@ void AccountWidget::doEdit(int accountId) {
     form->addRow("유형:",   typeBox);
 
     auto* btns = new QHBoxLayout;
+    btns->setSpacing(8);
     auto* ok   = new QPushButton("저장", dlg);
     auto* can  = new QPushButton("취소", dlg);
+    ok->setFixedHeight(36);
+    can->setFixedHeight(36);
     btns->addStretch(); btns->addWidget(ok); btns->addWidget(can);
     form->addRow(btns);
 

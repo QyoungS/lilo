@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QTableWidget>
 #include <QPushButton>
+#include <QGroupBox>
+#include <QLabel>
 
 class BudgetWidget : public QWidget {
     Q_OBJECT
@@ -22,4 +24,8 @@ private:
     QTableWidget* m_table;
     QPushButton*  m_editBtn;
     QPushButton*  m_deleteBtn;
+
+    QLabel* m_totalBudgetLabel  = nullptr;
+    QLabel* m_totalSpentLabel   = nullptr;
+    QLabel* m_remainingLabel    = nullptr;
 };

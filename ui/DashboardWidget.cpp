@@ -80,13 +80,17 @@ void DashboardWidget::setupUi() {
     // ── 2. 최근 거래 내역 + 예산 대비 지출 ───────────────────
     auto* recentGroup = new QGroupBox("최근 거래 내역", this);
     recentGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    recentGroup->setFixedHeight(210);
+    recentGroup->setFixedHeight(230);
     auto* recentLay = new QVBoxLayout(recentGroup);
     recentLay->setContentsMargins(8, 4, 8, 8);
 
     m_recentTxTable = new QTableWidget(0, 4, recentGroup);
     m_recentTxTable->setHorizontalHeaderLabels({"날짜", "계좌명", "유형", "금액"});
-    m_recentTxTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    m_recentTxTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    m_recentTxTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_recentTxTable->setColumnWidth(0, 140);
+    m_recentTxTable->setColumnWidth(2, 55);
+    m_recentTxTable->setColumnWidth(3, 110);
     m_recentTxTable->horizontalHeader()->setFont(QFont("맑은 고딕", 8, QFont::DemiBold));
     m_recentTxTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_recentTxTable->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -149,7 +153,7 @@ void DashboardWidget::setupCharts() {
     barView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     pieView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     barView->setMinimumHeight(180);
-    pieView->setMinimumHeight(180);
+    pieView->setMinimumHeight(200);
     barView->setFrameShape(QFrame::NoFrame);
     pieView->setFrameShape(QFrame::NoFrame);
     m_barChartView = barView;
@@ -269,6 +273,7 @@ void DashboardWidget::updateBudgetProgress() {
             int     pct      = budget > 0 ? qMin((int)(spent * 100.0 / budget), 100) : 0;
 
             auto* rowWidget = new QWidget(m_budgetContainer);
+            rowWidget->setMinimumHeight(52);
             auto* rowLay    = new QVBoxLayout(rowWidget);
             rowLay->setContentsMargins(0, 2, 0, 2);
             rowLay->setSpacing(4);
@@ -291,12 +296,12 @@ void DashboardWidget::updateBudgetProgress() {
             bar->setValue(pct);
             bar->setTextVisible(true);
             bar->setFormat(QString::number(pct) + "%");
-            bar->setFixedHeight(14);
+            bar->setFixedHeight(16);
             QString barColor = pct >= 100 ? "#EF4444" : pct >= 80 ? "#F59E0B" : "#3B82F6";
             bar->setStyleSheet(QString(
-                "QProgressBar { background:#F3F4F6; border-radius:7px; border:none; "
-                "text-align:center; font-size:7pt; color:#374151; }"
-                "QProgressBar::chunk { background:%1; border-radius:7px; }")
+                "QProgressBar { background:#F3F4F6; border-radius:8px; border:none; "
+                "height:16px; text-align:center; font-size:7pt; color:#374151; }"
+                "QProgressBar::chunk { background:%1; border-radius:8px; }")
                 .arg(barColor));
 
             rowLay->addLayout(hdr);
@@ -415,8 +420,8 @@ void DashboardWidget::updatePieChart() {
         slice->setBorderWidth(2);
         slice->setLabelVisible(slice->percentage() > 0.05);
         slice->setLabelPosition(QPieSlice::LabelOutside);
-        slice->setLabelFont(QFont("맑은 고딕", 8));
-        slice->setLabelColor(QColor("#374151"));
+        slice->setLabelFont(QFont("맑은 고딕", 9, QFont::Bold));
+        slice->setLabelColor(QColor("#111827"));
         ++i;
     }
 
@@ -425,12 +430,12 @@ void DashboardWidget::updatePieChart() {
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->setBackgroundVisible(false);
     chart->setPlotAreaBackgroundVisible(false);
-    chart->setMargins(QMargins(4, 4, 4, 4));
+    chart->setMargins(QMargins(8, 8, 8, 8));
 
     auto* legend = chart->legend();
     legend->setAlignment(Qt::AlignBottom);
-    legend->setFont(QFont("맑은 고딕", 8));
-    legend->setLabelColor(QColor("#374151"));
+    legend->setFont(QFont("맑은 고딕", 9));
+    legend->setLabelColor(QColor("#111827"));
     legend->setMarkerShape(QLegend::MarkerShapeCircle);
 
     static_cast<QChartView*>(m_pieChartView)->setChart(chart);

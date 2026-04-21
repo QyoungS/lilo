@@ -84,7 +84,7 @@ void MainWindow::setupSidebar() {
     // 구분선
     auto* divider = new QFrame(sidebar);
     divider->setFrameShape(QFrame::HLine);
-    divider->setStyleSheet("color: #2d3152; margin-bottom: 12px;");
+    divider->setStyleSheet("color: #2d3152; margin-bottom: 2px;");
     sideLayout->addWidget(divider);
 
     // 네비게이션 버튼
@@ -135,24 +135,26 @@ void MainWindow::setupSidebar() {
 
     auto* rateTitleLbl = new QLabel("실시간 환율", sidebar);
     rateTitleLbl->setStyleSheet(
-        "color: #64748b; font-size: 8pt; font-weight: 700; "
-        "padding: 4px 4px 6px 4px;");
+        "color: #CBD5E1; font-size: 7pt; font-weight: 700; "
+        "padding: 2px 4px 3px 4px;");
     sideLayout->addWidget(rateTitleLbl);
 
     auto* rateGrid   = new QWidget(sidebar);
+    rateGrid->setStyleSheet(
+        "background: rgba(255,255,255,0.05); border-radius: 6px; padding: 4px;");
     auto* rateGridLay = new QGridLayout(rateGrid);
-    rateGridLay->setContentsMargins(4, 0, 4, 0);
+    rateGridLay->setContentsMargins(2, 0, 2, 0);
     rateGridLay->setHorizontalSpacing(8);
-    rateGridLay->setVerticalSpacing(6);
+    rateGridLay->setVerticalSpacing(2);
 
     auto addRateRow = [&](int row, const QString& code, QLabel*& valueLabel,
                           const QString& tooltip) {
         auto* codeLbl = new QLabel(code, rateGrid);
         codeLbl->setStyleSheet(
-            "color: #64748b; font-size: 8pt; font-weight: 600;");
+            "color: #94A3B8; font-size: 7pt; font-weight: 700;");
         valueLabel = new QLabel("—", rateGrid);
         valueLabel->setStyleSheet(
-            "color: #e2e8f0; font-size: 8.5pt; font-weight: 600;");
+            "color: #FACC15; font-size: 7.5pt; font-weight: 600;");
         valueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         valueLabel->setToolTip(tooltip);
         rateGridLay->addWidget(codeLbl,    row, 0);
@@ -167,7 +169,7 @@ void MainWindow::setupSidebar() {
 
     m_sideRateTimeLbl = new QLabel("", sidebar);
     m_sideRateTimeLbl->setStyleSheet(
-        "color: #334155; font-size: 7pt; padding: 4px 4px 8px 4px;");
+        "color: #94A3B8; font-size: 6.5pt; padding: 2px 4px 6px 4px;");
     sideLayout->addWidget(m_sideRateTimeLbl);
 
     // 로그인 사용자 표시

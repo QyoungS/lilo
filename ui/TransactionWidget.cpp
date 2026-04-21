@@ -206,14 +206,43 @@ void TransactionWidget::setupUi() {
     auto* searchBtn = new QPushButton("검색", this);
     auto* resetBtn  = new QPushButton("초기화", this);
 
-    grid->addWidget(new QLabel("계좌:"),      0, 0); grid->addWidget(m_accountCombo,   0, 1);
-    grid->addWidget(new QLabel("키워드:"),    0, 2); grid->addWidget(m_keywordEdit,     0, 3);
-    grid->addWidget(new QLabel("카테고리:"),  0, 4); grid->addWidget(m_categoryFilter,  0, 5);
-    grid->addWidget(new QLabel("시작일:"),    1, 0); grid->addWidget(makeCalendarPicker(m_startDate, this), 1, 1);
-    grid->addWidget(new QLabel("종료일:"),    1, 2); grid->addWidget(makeCalendarPicker(m_endDate,   this), 1, 3);
-    grid->addWidget(new QLabel("최소 금액:"), 1, 4); grid->addWidget(m_minAmt,          1, 5);
-    grid->addWidget(new QLabel("최대 금액:"), 1, 6); grid->addWidget(m_maxAmt,          1, 7);
-    grid->addWidget(searchBtn,                1, 8); grid->addWidget(resetBtn,          1, 9);
+    m_accountCombo->setMinimumWidth(130);
+    m_keywordEdit->setMinimumWidth(130);
+    m_categoryFilter->setMinimumWidth(130);
+    m_startDate->setMinimumWidth(130);
+    m_endDate->setMinimumWidth(130);
+    m_minAmt->setMinimumWidth(130);
+    m_maxAmt->setMinimumWidth(130);
+
+    filterBox->setMinimumHeight(120);
+
+    // row 1 아이템: 레이블 위 + 위젯 아래 구조의 래퍼
+    auto makeItem = [this](const QString& labelText, QWidget* w) -> QWidget* {
+        auto* c = new QWidget(this);
+        auto* v = new QVBoxLayout(c);
+        v->setContentsMargins(0, 0, 0, 0);
+        v->setSpacing(2);
+        v->addWidget(new QLabel(labelText, c));
+        v->addWidget(w);
+        return c;
+    };
+
+    // row 0: 계좌, 키워드, 카테고리 (6 컬럼)
+    grid->addWidget(new QLabel("계좌:"),     0, 0); grid->addWidget(m_accountCombo,  0, 1);
+    grid->addWidget(new QLabel("키워드:"),   0, 2); grid->addWidget(m_keywordEdit,    0, 3);
+    grid->addWidget(new QLabel("카테고리:"), 0, 4); grid->addWidget(m_categoryFilter, 0, 5);
+
+    // row 1: 시작일, 종료일, 최소금액, 최대금액, 검색/초기화 (6 컬럼)
+    grid->addWidget(makeItem("시작일:",    makeCalendarPicker(m_startDate, this)), 1, 0);
+    grid->addWidget(makeItem("종료일:",    makeCalendarPicker(m_endDate,   this)), 1, 1);
+    grid->addWidget(makeItem("최소 금액:", m_minAmt),                              1, 2);
+    grid->addWidget(makeItem("최대 금액:", m_maxAmt),                              1, 3);
+    grid->addWidget(searchBtn,                                                      1, 4, Qt::AlignBottom);
+    grid->addWidget(resetBtn,                                                       1, 5, Qt::AlignBottom);
+
+    // 6 컬럼 균등 확장
+    for (int c = 0; c < 6; ++c) grid->setColumnStretch(c, 1);
+
     root->addWidget(filterBox);
 
     m_accountModel = new AccountModel(this);
@@ -310,7 +339,10 @@ void TransactionWidget::onEdit() {
 
     auto* dlg  = new QDialog(this);
     dlg->setWindowTitle("거래 수정");
+    dlg->setMinimumWidth(400);
     auto* form = new QFormLayout(dlg);
+    form->setSpacing(14);
+    form->setContentsMargins(24, 24, 24, 24);
 
     auto* amtSpin = new QDoubleSpinBox(dlg);
     amtSpin->setRange(0.01, 1e12);
@@ -327,8 +359,11 @@ void TransactionWidget::onEdit() {
     form->addRow("설명:", descEdit);
 
     auto* btns = new QHBoxLayout;
+    btns->setSpacing(8);
     auto* ok  = new QPushButton("저장", dlg);
     auto* can = new QPushButton("취소", dlg);
+    ok->setFixedHeight(36);
+    can->setFixedHeight(36);
     btns->addWidget(ok); btns->addWidget(can);
     form->addRow(btns);
 
