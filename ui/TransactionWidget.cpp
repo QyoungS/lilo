@@ -18,6 +18,141 @@
 #include <QFormLayout>
 #include <QDoubleSpinBox>
 #include <QLineEdit>
+#include <QCalendarWidget>
+#include <QScreen>
+
+// QDateEdit + 달력 버튼 래퍼 — QDialog 기반 팝업이라 부모 위젯 경계에 잘리지 않음
+static QWidget* makeCalendarPicker(QDateEdit* edit, QWidget* dialogParent) {
+    auto* wrapper = new QWidget(dialogParent);
+    auto* hl = new QHBoxLayout(wrapper);
+    hl->setContentsMargins(0, 0, 0, 0);
+    hl->setSpacing(3);
+
+    edit->setParent(wrapper);
+    hl->addWidget(edit, 1);
+
+    auto* btn = new QPushButton(wrapper);
+    btn->setFixedWidth(20);
+    btn->setToolTip("날짜 선택");
+    btn->setCursor(Qt::PointingHandCursor);
+    btn->setStyleSheet(
+        "QPushButton{background:transparent;border:none;outline:none;}"
+        "QPushButton:hover{background:transparent;}"
+    );
+    hl->addWidget(btn);
+
+    QObject::connect(btn, &QPushButton::clicked, dialogParent, [edit, btn, dialogParent]() {
+        auto* dlg = new QDialog(dialogParent->window(),
+                                Qt::Dialog | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+        auto* vl = new QVBoxLayout(dlg);
+        vl->setContentsMargins(4, 4, 4, 4);
+        vl->setSpacing(0);
+
+        auto* cal = new QCalendarWidget(dlg);
+        cal->setSelectedDate(edit->date());
+        cal->setGridVisible(true);
+        cal->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+        cal->setMinimumSize(cal->sizeHint().expandedTo(QSize(360, 270)));
+
+        // 내비게이션 바 스타일 (전역 QSS 간섭 없는 영역)
+        cal->setStyleSheet(R"(
+            QCalendarWidget QWidget#qt_calendar_navigationbar {
+                background-color: #3B82F6;
+            }
+            QCalendarWidget QToolButton {
+                color: #ffffff; background: transparent; font-weight: 600;
+            }
+            QCalendarWidget QToolButton:hover { background: #2563EB; border-radius: 4px; }
+            QCalendarWidget QSpinBox { color: #ffffff; background: transparent; }
+            QCalendarWidget QMenu    { color: #111827; background: #ffffff; }
+        )");
+
+        // 전역 QSS가 QAbstractItemView의 color를 덮어쓰므로,
+        // 내부 뷰를 직접 찾아 위젯 자체 stylesheet + 셀 최소 크기 강제 지정
+        if (auto* v = cal->findChild<QAbstractItemView*>()) {
+            v->setStyleSheet(
+                "color: #111827;"
+                "background-color: #ffffff;"
+                "selection-color: #ffffff;"
+                "selection-background-color: #3B82F6;"
+            );
+            QPalette pal = v->palette();
+            pal.setColor(QPalette::All, QPalette::Text,            QColor("#111827"));
+            pal.setColor(QPalette::All, QPalette::Base,            Qt::white);
+            pal.setColor(QPalette::All, QPalette::Highlight,       QColor("#3B82F6"));
+            pal.setColor(QPalette::All, QPalette::HighlightedText, Qt::white);
+            v->setPalette(pal);
+
+            // 날짜 셀 최소 너비·높이 — 두 자릿수 숫자가 잘리지 않도록 보장
+            if (auto* table = qobject_cast<QTableView*>(v)) {
+                table->horizontalHeader()->setMinimumSectionSize(42);
+                table->verticalHeader()->setMinimumSectionSize(32);
+            }
+        }
+
+        // 주말 색상은 setWeekdayTextFormat으로 별도 지정
+        QTextCharFormat satFmt, sunFmt;
+        satFmt.setForeground(QColor("#1D4ED8"));
+        sunFmt.setForeground(QColor("#DC2626"));
+        cal->setWeekdayTextFormat(Qt::Saturday, satFmt);
+        cal->setWeekdayTextFormat(Qt::Sunday,   sunFmt);
+
+        // 이전/다음 달 날짜를 연한 회색으로 dim 처리
+        // setDateTextFormat은 setWeekdayTextFormat보다 우선순위가 높으므로 확실히 덮어씀
+        // 월이 바뀔 때마다 재적용해야 하므로 currentPageChanged에 연결
+        auto dimOtherMonthDates = [cal]() {
+            const int   m     = cal->monthShown();
+            const int   y     = cal->yearShown();
+            const QDate first(y, m, 1);
+            const QDate last (y, m, first.daysInMonth());
+
+            QTextCharFormat dimFmt;
+            dimFmt.setForeground(QColor("#C4CBD8")); // 연한 회색
+
+            QTextCharFormat clearFmt; // 빈 포맷 = date-specific 오버라이드 제거
+
+            // 현재 월 날짜의 이전 dim 초기화
+            for (QDate d = first; d <= last; d = d.addDays(1))
+                cal->setDateTextFormat(d, clearFmt);
+
+            // 이전 달 노출 날짜(최대 6일) dim
+            for (QDate d = first.addDays(-6); d < first; d = d.addDays(1))
+                cal->setDateTextFormat(d, dimFmt);
+
+            // 다음 달 노출 날짜(최대 6일) dim
+            for (QDate d = last.addDays(1); d <= last.addDays(6); d = d.addDays(1))
+                cal->setDateTextFormat(d, dimFmt);
+        };
+
+        dimOtherMonthDates();
+        QObject::connect(cal, &QCalendarWidget::currentPageChanged,
+                         dlg, [dimOtherMonthDates](int, int) { dimOtherMonthDates(); });
+
+        vl->addWidget(cal);
+
+        QObject::connect(cal, &QCalendarWidget::clicked, dlg, [edit, dlg](const QDate& d) {
+            edit->setDate(d);
+            dlg->accept();
+        });
+
+        dlg->adjustSize();
+
+        // 버튼 아래에 팝업을 위치시키되, 화면 밖으로 벗어나지 않도록 조정
+        QPoint pos = btn->mapToGlobal(QPoint(0, btn->height()));
+        const QRect screen = btn->screen()->availableGeometry();
+        if (pos.x() + dlg->width()  > screen.right())
+            pos.setX(screen.right() - dlg->width());
+        if (pos.y() + dlg->height() > screen.bottom())
+            pos.setY(btn->mapToGlobal(QPoint(0, 0)).y() - dlg->height());
+        dlg->move(pos);
+
+        dlg->exec();
+    });
+
+    return wrapper;
+}
 
 TransactionWidget::TransactionWidget(int userId, QWidget* parent)
     : QWidget(parent), m_userId(userId)
@@ -53,16 +188,20 @@ void TransactionWidget::setupUi() {
 
     m_startDate = new QDateEdit(QDate::currentDate().addMonths(-1), this);
     m_endDate   = new QDateEdit(QDate::currentDate(), this);
-    m_startDate->setCalendarPopup(true);
-    m_endDate->setCalendarPopup(true);
+    m_startDate->setCalendarPopup(false);
+    m_endDate->setCalendarPopup(false);
     m_startDate->setDisplayFormat("yyyy-MM-dd");
     m_endDate->setDisplayFormat("yyyy-MM-dd");
+    m_startDate->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    m_endDate->setButtonSymbols(QAbstractSpinBox::NoButtons);
 
     m_minAmt = new QDoubleSpinBox(this);
     m_maxAmt = new QDoubleSpinBox(this);
     m_minAmt->setRange(0, 1e12); m_minAmt->setSpecialValueText("전체");
     m_maxAmt->setRange(0, 1e12); m_maxAmt->setSpecialValueText("전체");
     m_minAmt->setValue(0); m_maxAmt->setValue(0);
+    m_minAmt->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    m_maxAmt->setButtonSymbols(QAbstractSpinBox::NoButtons);
 
     auto* searchBtn = new QPushButton("검색", this);
     auto* resetBtn  = new QPushButton("초기화", this);
@@ -70,8 +209,8 @@ void TransactionWidget::setupUi() {
     grid->addWidget(new QLabel("계좌:"),      0, 0); grid->addWidget(m_accountCombo,   0, 1);
     grid->addWidget(new QLabel("키워드:"),    0, 2); grid->addWidget(m_keywordEdit,     0, 3);
     grid->addWidget(new QLabel("카테고리:"),  0, 4); grid->addWidget(m_categoryFilter,  0, 5);
-    grid->addWidget(new QLabel("시작일:"),    1, 0); grid->addWidget(m_startDate,       1, 1);
-    grid->addWidget(new QLabel("종료일:"),    1, 2); grid->addWidget(m_endDate,         1, 3);
+    grid->addWidget(new QLabel("시작일:"),    1, 0); grid->addWidget(makeCalendarPicker(m_startDate, this), 1, 1);
+    grid->addWidget(new QLabel("종료일:"),    1, 2); grid->addWidget(makeCalendarPicker(m_endDate,   this), 1, 3);
     grid->addWidget(new QLabel("최소 금액:"), 1, 4); grid->addWidget(m_minAmt,          1, 5);
     grid->addWidget(new QLabel("최대 금액:"), 1, 6); grid->addWidget(m_maxAmt,          1, 7);
     grid->addWidget(searchBtn,                1, 8); grid->addWidget(resetBtn,          1, 9);

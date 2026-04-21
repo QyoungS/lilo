@@ -32,6 +32,7 @@ private:
     void doWithdraw(int accountId);
     void doEdit(int accountId);
     void doDelete(int accountId);
+    void doTransfer(int accountId);
     void showAmountDialog(int accountId, bool isDeposit);
 
     int           m_userId;
