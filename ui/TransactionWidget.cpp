@@ -375,6 +375,25 @@ void TransactionWidget::setupUi() {
     btns->addWidget(exportBtn);
     root->addLayout(btns);
 
+    // 날짜 역전 방지: 시작일 변경 시 종료일이 더 이전이면 종료일을 시작일로 맞춤
+    connect(m_startDate, &QDateEdit::dateChanged, this, [this](const QDate& d) {
+        if (d > m_endDate->date()) {
+            m_endDate->blockSignals(true);
+            m_endDate->setDate(d);
+            m_endDate->blockSignals(false);
+        }
+        onSearch();
+    });
+    // 종료일 변경 시 시작일이 더 이후면 시작일을 종료일로 맞춤
+    connect(m_endDate, &QDateEdit::dateChanged, this, [this](const QDate& d) {
+        if (d < m_startDate->date()) {
+            m_startDate->blockSignals(true);
+            m_startDate->setDate(d);
+            m_startDate->blockSignals(false);
+        }
+        onSearch();
+    });
+
     connect(searchBtn, &QPushButton::clicked, this, &TransactionWidget::onSearch);
     connect(resetBtn,  &QPushButton::clicked, this, [this]() {
         m_keywordEdit->clear();
