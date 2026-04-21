@@ -145,7 +145,7 @@ void DashboardWidget::setupUi() {
     m_recentTxTable->setColumnWidth(0, 140);
     m_recentTxTable->setColumnWidth(3, 120);
     m_recentTxTable->horizontalHeader()->setFont(QFont("맑은 고딕", 8, QFont::DemiBold));
-    m_recentTxTable->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    m_recentTxTable->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
     m_recentTxTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_recentTxTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_recentTxTable->verticalHeader()->hide();
