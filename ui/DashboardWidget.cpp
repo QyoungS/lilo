@@ -61,14 +61,37 @@ DashboardWidget::DashboardWidget(int userId, QWidget* parent)
     refresh();
 }
 
+// QGroupBox 공통 스타일 — 타이틀이 테두리 위에 떠 있도록 margin-top 확보
+static QString groupBoxStyle(const QString& titleBg = "#F8FAFC") {
+    return QString(
+        "QGroupBox {"
+        "  border: 1px solid #E2E8F0;"
+        "  border-radius: 10px;"
+        "  margin-top: 20px;"
+        "  background: #FFFFFF;"
+        "}"
+        "QGroupBox::title {"
+        "  subcontrol-origin: margin;"
+        "  subcontrol-position: top left;"
+        "  left: 14px;"
+        "  top: 0px;"
+        "  padding: 2px 8px;"
+        "  color: #374151;"
+        "  font-size: 9pt;"
+        "  font-weight: 700;"
+        "  background: %1;"
+        "  border-radius: 4px;"
+        "}").arg(titleBg);
+}
+
 void DashboardWidget::setupUi() {
     auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(20, 16, 20, 16);
-    root->setSpacing(12);
+    root->setContentsMargins(20, 20, 20, 20);
+    root->setSpacing(16);
 
     // ── 1. 요약 카드 ─────────────────────────────────────────
     auto* cardsRow = new QHBoxLayout;
-    cardsRow->setSpacing(12);
+    cardsRow->setSpacing(14);
     cardsRow->addWidget(makeSummaryCard(
         "총 자산",      m_totalBalanceLabel, "#1565C0", "#E3F2FD", "#1565C0", this));
     cardsRow->addWidget(makeSummaryCard(
@@ -79,19 +102,22 @@ void DashboardWidget::setupUi() {
 
     // ── 2. 최근 거래 내역 + 예산 대비 지출 ───────────────────
     auto* recentGroup = new QGroupBox("최근 거래 내역", this);
+    recentGroup->setStyleSheet(groupBoxStyle());
     recentGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    recentGroup->setFixedHeight(230);
+    recentGroup->setFixedHeight(248);
     auto* recentLay = new QVBoxLayout(recentGroup);
-    recentLay->setContentsMargins(8, 4, 8, 8);
+    recentLay->setContentsMargins(10, 10, 10, 10);
+    recentLay->setSpacing(0);
 
     m_recentTxTable = new QTableWidget(0, 4, recentGroup);
     m_recentTxTable->setHorizontalHeaderLabels({"날짜", "계좌명", "유형", "금액"});
     m_recentTxTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     m_recentTxTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_recentTxTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_recentTxTable->setColumnWidth(0, 140);
-    m_recentTxTable->setColumnWidth(2, 55);
-    m_recentTxTable->setColumnWidth(3, 110);
+    m_recentTxTable->setColumnWidth(3, 120);
     m_recentTxTable->horizontalHeader()->setFont(QFont("맑은 고딕", 8, QFont::DemiBold));
+    m_recentTxTable->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_recentTxTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_recentTxTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_recentTxTable->verticalHeader()->hide();
@@ -102,10 +128,12 @@ void DashboardWidget::setupUi() {
     recentLay->addWidget(m_recentTxTable);
 
     auto* budgetGroup = new QGroupBox("예산 대비 지출", this);
+    budgetGroup->setStyleSheet(groupBoxStyle());
     budgetGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    budgetGroup->setFixedHeight(210);
+    budgetGroup->setFixedHeight(248);
     auto* budgetGroupLay = new QVBoxLayout(budgetGroup);
-    budgetGroupLay->setContentsMargins(8, 4, 8, 8);
+    budgetGroupLay->setContentsMargins(10, 10, 10, 10);
+    budgetGroupLay->setSpacing(0);
 
     auto* budgetScroll = new QScrollArea(budgetGroup);
     budgetScroll->setWidgetResizable(true);
@@ -113,12 +141,12 @@ void DashboardWidget::setupUi() {
     m_budgetContainer = new QWidget;
     m_budgetLayout = new QVBoxLayout(m_budgetContainer);
     m_budgetLayout->setContentsMargins(4, 4, 4, 4);
-    m_budgetLayout->setSpacing(10);
+    m_budgetLayout->setSpacing(12);
     budgetScroll->setWidget(m_budgetContainer);
     budgetGroupLay->addWidget(budgetScroll);
 
     auto* midRow = new QHBoxLayout;
-    midRow->setSpacing(12);
+    midRow->setSpacing(14);
     midRow->addWidget(recentGroup, 1);
     midRow->addWidget(budgetGroup, 1);
     root->addLayout(midRow);
@@ -127,19 +155,23 @@ void DashboardWidget::setupUi() {
     setupCharts();
 
     auto* barGroup = new QGroupBox("월별 수입 / 지출", this);
+    barGroup->setStyleSheet(groupBoxStyle());
     barGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto* barLay = new QVBoxLayout(barGroup);
-    barLay->setContentsMargins(8, 4, 8, 8);
+    barLay->setContentsMargins(10, 10, 10, 10);
+    barLay->setSpacing(0);
     barLay->addWidget(m_barChartView);
 
     auto* pieGroup = new QGroupBox("이번 달 카테고리별 지출", this);
+    pieGroup->setStyleSheet(groupBoxStyle());
     pieGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto* pieLay = new QVBoxLayout(pieGroup);
-    pieLay->setContentsMargins(8, 4, 8, 8);
+    pieLay->setContentsMargins(10, 10, 10, 10);
+    pieLay->setSpacing(0);
     pieLay->addWidget(m_pieChartView);
 
     auto* chartRow = new QHBoxLayout;
-    chartRow->setSpacing(12);
+    chartRow->setSpacing(14);
     chartRow->addWidget(barGroup, 3);
     chartRow->addWidget(pieGroup, 2);
     root->addLayout(chartRow, 1);
@@ -342,11 +374,30 @@ void DashboardWidget::updateBarChart() {
     if (q.exec()) {
         while (q.next()) {
             months << q.value(0).toString() + "월";
-            *incomeSet  << q.value(1).toDouble();
-            *expenseSet << q.value(2).toDouble();
+            // 만원 단위로 변환
+            *incomeSet  << q.value(1).toDouble() / 10000.0;
+            *expenseSet << q.value(2).toDouble() / 10000.0;
         }
     }
     if (months.isEmpty()) { months << "—"; *incomeSet << 0; *expenseSet << 0; }
+
+    // 데이터 최대값으로 '깔끔한 정수' 눈금 간격 산출
+    // rawStep = max/4 → 1·2·5 계열로 올림 → niceMax = step * ceil(max/step)
+    double maxVal = 0;
+    for (int i = 0; i < incomeSet->count(); ++i)
+        maxVal = qMax(maxVal, qMax(incomeSet->at(i), expenseSet->at(i)));
+
+    double tickInterval = 25.0, niceMax = 100.0;
+    if (maxVal > 0) {
+        double rawStep = maxVal / 4.0;
+        double mag     = qPow(10.0, qFloor(qLn(rawStep) / qLn(10.0)));
+        double norm    = rawStep / mag;
+        if      (norm <= 1.0) tickInterval = 1.0  * mag;
+        else if (norm <= 2.0) tickInterval = 2.0  * mag;
+        else if (norm <= 5.0) tickInterval = 5.0  * mag;
+        else                  tickInterval = 10.0 * mag;
+        niceMax = tickInterval * qCeil(maxVal / tickInterval);
+    }
 
     auto* series = new QBarSeries;
     series->append(incomeSet);
@@ -358,7 +409,7 @@ void DashboardWidget::updateBarChart() {
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->setBackgroundVisible(false);
     chart->setPlotAreaBackgroundVisible(false);
-    chart->setMargins(QMargins(20, 10, 10, 10));
+    chart->setMargins(QMargins(4, 10, 10, 10));
 
     auto* legend = chart->legend();
     legend->setAlignment(Qt::AlignTop);
@@ -376,12 +427,17 @@ void DashboardWidget::updateBarChart() {
     series->attachAxis(axisX);
 
     auto* axisY = new QValueAxis;
+    axisY->setRange(0, niceMax);
+    axisY->setTickType(QValueAxis::TicksDynamic);
+    axisY->setTickInterval(tickInterval);
+    axisY->setLabelFormat("%.0f");
     axisY->setLabelsFont(QFont("맑은 고딕", 8));
     axisY->setLabelsColor(QColor("#6B7280"));
     axisY->setGridLineColor(QColor("#F3F4F6"));
     axisY->setLinePenColor(Qt::transparent);
-    axisY->setTickCount(5);
-    axisY->setLabelFormat("%'.0f");
+    axisY->setTitleText("(단위: 만원)");
+    axisY->setTitleFont(QFont("맑은 고딕", 7));
+    axisY->setTitleBrush(QBrush(QColor("#9CA3AF")));
     chart->addAxis(axisY, Qt::AlignLeft);
     series->attachAxis(axisY);
 

@@ -333,7 +333,13 @@ int TransactionWidget::selectedTransactionId() {
 
 void TransactionWidget::onEdit() {
     int row = selectedRow();
-    if (row < 0) { QMessageBox::information(this, "선택", "거래를 선택하세요."); return; }
+    if (row < 0) {
+        QMessageBox mb(QMessageBox::Information, "선택", "거래를 선택하세요.",
+                       QMessageBox::Ok, this);
+        mb.button(QMessageBox::Ok)->setMinimumWidth(140);
+        mb.exec();
+        return;
+    }
 
     Transaction t = m_model->transactionAt(row);
 
@@ -344,17 +350,11 @@ void TransactionWidget::onEdit() {
     form->setSpacing(14);
     form->setContentsMargins(24, 24, 24, 24);
 
-    auto* amtSpin = new QDoubleSpinBox(dlg);
-    amtSpin->setRange(0.01, 1e12);
-    amtSpin->setDecimals(2);
-    amtSpin->setValue(t.amount);
-
     auto* catBox = new QComboBox(dlg);
     catBox->addItems({"급여", "식비", "교통", "쇼핑", "의료", "여가", "이체", "기타"});
     catBox->setCurrentText(t.category);
 
     auto* descEdit = new QLineEdit(t.description, dlg);
-    form->addRow("금액:", amtSpin);
     form->addRow("카테고리:", catBox);
     form->addRow("설명:", descEdit);
 
@@ -369,7 +369,7 @@ void TransactionWidget::onEdit() {
 
     connect(can, &QPushButton::clicked, dlg, &QDialog::reject);
     connect(ok,  &QPushButton::clicked, dlg, [=]() {
-        if (!TransactionManager::instance().updateTransaction(t.id, amtSpin->value(),
+        if (!TransactionManager::instance().updateTransaction(t.id, t.amount,
                 catBox->currentText(), descEdit->text())) {
             QMessageBox::warning(dlg, "오류", "수정에 실패했습니다.");
             return;
@@ -383,7 +383,13 @@ void TransactionWidget::onEdit() {
 
 void TransactionWidget::onDelete() {
     int id = selectedTransactionId();
-    if (id < 0) { QMessageBox::information(this, "선택", "거래를 선택하세요."); return; }
+    if (id < 0) {
+        QMessageBox mb(QMessageBox::Information, "선택", "거래를 선택하세요.",
+                       QMessageBox::Ok, this);
+        mb.button(QMessageBox::Ok)->setMinimumWidth(140);
+        mb.exec();
+        return;
+    }
 
     if (QMessageBox::question(this, "삭제", "이 거래를 삭제하시겠습니까? 잔액이 재계산됩니다.")
             == QMessageBox::Yes) {
