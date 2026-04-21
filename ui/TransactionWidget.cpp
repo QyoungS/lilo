@@ -20,6 +20,7 @@
 #include <QLineEdit>
 #include <QCalendarWidget>
 #include <QScreen>
+#include <QStyleFactory>
 
 // QDateEdit + 달력 버튼 래퍼 — QDialog 기반 팝업이라 부모 위젯 경계에 잘리지 않음
 static QWidget* makeCalendarPicker(QDateEdit* edit, QWidget* dialogParent) {
@@ -31,13 +32,18 @@ static QWidget* makeCalendarPicker(QDateEdit* edit, QWidget* dialogParent) {
     edit->setParent(wrapper);
     hl->addWidget(edit, 1);
 
-    auto* btn = new QPushButton(wrapper);
-    btn->setFixedWidth(20);
+    auto* btn = new QPushButton("📅", wrapper);
+    btn->setFixedSize(32, 32);
     btn->setToolTip("날짜 선택");
     btn->setCursor(Qt::PointingHandCursor);
     btn->setStyleSheet(
-        "QPushButton{background:transparent;border:none;outline:none;}"
-        "QPushButton:hover{background:transparent;}"
+        "QPushButton{"
+        "  background:#3B82F6; color:#FFFFFF;"
+        "  border:none; border-radius:6px;"
+        "  font-size:13px; padding:0;"
+        "}"
+        "QPushButton:hover{background:#2563EB;}"
+        "QPushButton:pressed{background:#1D4ED8;}"
     );
     hl->addWidget(btn);
 
@@ -259,6 +265,28 @@ void TransactionWidget::setupUi() {
     m_view->horizontalHeader()->setStretchLastSection(true);
     m_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_view->verticalHeader()->hide();
+    m_view->setAttribute(Qt::WA_MacShowFocusRect, false);
+    m_view->setStyle(QStyleFactory::create("Fusion"));
+    m_view->setStyleSheet(
+        "QTableView {"
+        "  outline: 0;"
+        "}"
+        "QTableView::item {"
+        "  border: none;"
+        "  outline: 0;"
+        "}"
+        "QTableView::item:selected {"
+        "  background: #DBEAFE;"
+        "  color: #1E40AF;"
+        "  border: none;"
+        "  outline: 0;"
+        "}"
+        "QTableView::item:focus {"
+        "  background: #DBEAFE;"
+        "  color: #1E40AF;"
+        "  border: none;"
+        "  outline: 0;"
+        "}");
     root->addWidget(m_view);
 
     auto* btns      = new QHBoxLayout;

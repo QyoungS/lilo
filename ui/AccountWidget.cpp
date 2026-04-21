@@ -519,7 +519,7 @@ void AccountWidget::onAdd() {
     auto* numEdit  = new QLineEdit(dlg);
     numEdit->setPlaceholderText("예: 110-123-456789");
     auto* typeBox  = new QComboBox(dlg);
-    typeBox->addItems({"입출금", "저축", "투자", "현금"});
+    typeBox->addItems({"입출금", "저축", "투자"});
 
     auto* currencyLbl = new QLabel("₩ KRW (대한민국 원)", dlg);
     currencyLbl->setStyleSheet("color:#64748B;font-size:9pt;");
@@ -626,7 +626,7 @@ void AccountWidget::doEdit(int accountId) {
 
     auto* nameEdit = new QLineEdit(a.name, dlg);
     auto* typeBox  = new QComboBox(dlg);
-    typeBox->addItems({"입출금", "저축", "투자", "현금"});
+    typeBox->addItems({"입출금", "저축", "투자"});
     typeBox->setCurrentText(typeLabel(a.type));
 
     form->addRow("계좌명:", nameEdit);
