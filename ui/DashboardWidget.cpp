@@ -228,7 +228,7 @@ void DashboardWidget::setupUi() {
 
     // 우측 커스텀 범례
     m_pieLegendWidget = new QWidget(pieGroup);
-    m_pieLegendWidget->setFixedWidth(100);
+    m_pieLegendWidget->setFixedWidth(140);
     m_pieLegendWidget->setStyleSheet("background:transparent;");
     m_pieLegendLayout = new QVBoxLayout(m_pieLegendWidget);
     m_pieLegendLayout->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
@@ -563,23 +563,35 @@ void DashboardWidget::updatePieChart() {
         }
         int li = 0;
         for (const auto& r : rows) {
+            double pct = (totalExp > 0) ? (r.amt / totalExp * 100.0) : 0.0;
+
             auto* legRow = new QWidget(m_pieLegendWidget);
             legRow->setStyleSheet("background:transparent;");
             auto* legH = new QHBoxLayout(legRow);
             legH->setContentsMargins(0, 0, 0, 0);
-            legH->setSpacing(6);
+            legH->setSpacing(5);
 
+            // 색상 점
             auto* dot = new QLabel("●", legRow);
             dot->setStyleSheet(QString(
                 "color:%1; font-size:9pt; background:transparent;").arg(kColors[li % 8]));
             dot->setFixedWidth(14);
 
-            auto* lbl = new QLabel(r.cat.left(5), legRow);
-            lbl->setStyleSheet("color:#374151; font-size:8pt; background:transparent;");
+            // 카테고리 이름 (좌측 정렬, 줄임)
+            auto* lbl = new QLabel(r.cat.left(6), legRow);
+            lbl->setStyleSheet("color:#374151; font-size:8pt; font-weight:600; background:transparent;");
             lbl->setToolTip(r.cat);
+            lbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+            // 퍼센트 (우측 정렬, 고정 너비)
+            auto* pctLbl = new QLabel(QString("%1%").arg(pct, 0, 'f', 1), legRow);
+            pctLbl->setStyleSheet("color:#6B7280; font-size:8pt; background:transparent;");
+            pctLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            pctLbl->setFixedWidth(42);
 
             legH->addWidget(dot);
             legH->addWidget(lbl, 1);
+            legH->addWidget(pctLbl);
             m_pieLegendLayout->addWidget(legRow);
             ++li;
         }
