@@ -469,7 +469,7 @@ void DashboardWidget::updateBarChart() {
         else if (norm <= 2.0) tickInterval = 2.0  * mag;
         else if (norm <= 5.0) tickInterval = 5.0  * mag;
         else                  tickInterval = 10.0 * mag;
-        niceMax = tickInterval * qCeil(maxVal / tickInterval) * 1.5;
+        niceMax = tickInterval * qCeil(maxVal / tickInterval) * 1.1;
     }
 
     auto* series = new QBarSeries;
