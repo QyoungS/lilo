@@ -212,7 +212,8 @@ void DashboardWidget::setupUi() {
     centerOverlay->setStyleSheet("background:transparent;");
     auto* overLay = new QVBoxLayout(centerOverlay);
     overLay->setAlignment(Qt::AlignCenter);
-    overLay->setContentsMargins(0, 0, 0, 0);
+    // 중앙보다 살짝 좌상단으로 이동 (범례와 겹침 방지)
+    overLay->setContentsMargins(0, 0, 40, 30);
     overLay->setSpacing(4);
     m_pieCenterTopLbl = new QLabel("—", centerOverlay);
     m_pieCenterTopLbl->setAlignment(Qt::AlignCenter);
@@ -470,7 +471,7 @@ void DashboardWidget::updateBarChart() {
         else if (norm <= 2.0) tickInterval = 2.0  * mag;
         else if (norm <= 5.0) tickInterval = 5.0  * mag;
         else                  tickInterval = 10.0 * mag;
-        niceMax = tickInterval * qCeil(maxVal / tickInterval);
+        niceMax = tickInterval * qCeil(maxVal / tickInterval) * 1.2;
     }
 
     auto* series = new QBarSeries;
