@@ -17,6 +17,41 @@
 #include <QHeaderView>
 #include <QLocale>
 #include <QDebug>
+#include <QStyledItemDelegate>
+#include <QPainter>
+#include <map>
+
+// ── 열 정렬 위임자 + 가로 구분선 전용 렌더링 ─────────────────────
+class AlignmentDelegate : public QStyledItemDelegate {
+public:
+    AlignmentDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+
+    void setColumnAlignment(int column, Qt::Alignment alignment) {
+        m_alignments[column] = alignment;
+    }
+
+    void initStyleOption(QStyleOptionViewItem* option,
+                         const QModelIndex& index) const override {
+        QStyledItemDelegate::initStyleOption(option, index);
+        auto it = m_alignments.find(index.column());
+        if (it != m_alignments.end())
+            option->displayAlignment = it->second;
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override {
+        QStyledItemDelegate::paint(painter, option, index);
+        painter->save();
+        painter->setPen(QPen(QColor("#EEF2F7"), 1));
+        painter->drawLine(option.rect.bottomLeft(), option.rect.bottomRight());
+        painter->restore();
+    }
+
+private:
+    std::map<int, Qt::Alignment> m_alignments;
+};
+
+// ─────────────────────────────────────────────────────────────────
 
 BudgetWidget::BudgetWidget(int userId, QWidget* parent)
     : QWidget(parent), m_userId(userId)
@@ -36,37 +71,89 @@ void BudgetWidget::setupUi() {
 
     auto makeCard = [&](const QString& title, QLabel*& valLbl, const QString& color) -> QGroupBox* {
         auto* box = new QGroupBox(this);
-        box->setFixedHeight(80);
+        box->setFixedHeight(90);
+        box->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         box->setStyleSheet(QString(
             "QGroupBox { background:#FFFFFF; border:1px solid #E5E7EB; "
             "border-top:3px solid %1; border-radius:8px; margin-top:0; }").arg(color));
         auto* vl = new QVBoxLayout(box);
-        vl->setContentsMargins(14, 10, 14, 10);
-        vl->setSpacing(4);
+        vl->setContentsMargins(12, 8, 12, 8);
+        vl->setSpacing(2);
+        vl->setAlignment(Qt::AlignVCenter);
         auto* titleLbl = new QLabel(title, box);
+        titleLbl->setWordWrap(false);
         titleLbl->setStyleSheet("color:#6B7280; font-size:8.5pt; font-weight:600; background:transparent;");
         valLbl = new QLabel("₩0", box);
+        valLbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        valLbl->setMinimumWidth(0);
+        valLbl->setWordWrap(false);
         valLbl->setStyleSheet(QString(
-            "color:%1; font-size:13pt; font-weight:700; background:transparent;").arg(color));
+            "color:%1; font-size:11pt; font-weight:700; background:transparent;").arg(color));
+        valLbl->adjustSize();
         vl->addWidget(titleLbl);
         vl->addWidget(valLbl);
         return box;
     };
 
-    cardsRow->addWidget(makeCard("총 예산",   m_totalBudgetLabel, "#2563EB"));
-    cardsRow->addWidget(makeCard("총 지출",   m_totalSpentLabel,  "#DC2626"));
-    cardsRow->addWidget(makeCard("남은 예산", m_remainingLabel,   "#059669"));
+    cardsRow->addWidget(makeCard("총 예산",   m_totalBudgetLabel, "#2563EB"), 1);
+    cardsRow->addWidget(makeCard("총 지출",   m_totalSpentLabel,  "#DC2626"), 1);
+    cardsRow->addWidget(makeCard("남은 예산", m_remainingLabel,   "#059669"), 1);
     root->addLayout(cardsRow);
 
     // ── 테이블 ────────────────────────────────────────────────
     m_table = new QTableWidget(this);
     m_table->setColumnCount(7);
     m_table->setHorizontalHeaderLabels({"ID", "카테고리", "월 한도", "지출액", "잔여", "상태", "진행률"});
+    m_table->horizontalHeaderItem(1)->setTextAlignment(Qt::AlignLeft  | Qt::AlignVCenter);
+    m_table->horizontalHeaderItem(2)->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_table->horizontalHeaderItem(3)->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_table->horizontalHeaderItem(4)->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_table->horizontalHeaderItem(5)->setTextAlignment(Qt::AlignCenter);
+    m_table->horizontalHeaderItem(6)->setTextAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+
+    auto* alignDelegate = new AlignmentDelegate(m_table);
+    alignDelegate->setColumnAlignment(1, Qt::AlignLeft  | Qt::AlignVCenter);
+    alignDelegate->setColumnAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+    alignDelegate->setColumnAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+    alignDelegate->setColumnAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+    alignDelegate->setColumnAlignment(5, Qt::AlignCenter);
+    alignDelegate->setColumnAlignment(6, Qt::AlignLeft  | Qt::AlignVCenter);
+    m_table->setItemDelegate(alignDelegate);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_table->setSelectionMode(QAbstractItemView::SingleSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->verticalHeader()->hide();
     m_table->setColumnHidden(0, true);
+    m_table->setShowGrid(false);
+    m_table->verticalHeader()->setDefaultSectionSize(48);
+    m_table->setStyleSheet(
+        "QTableWidget {"
+        "  background:#FFFFFF;"
+        "  border:1px solid #E2E8F0;"
+        "  border-radius:8px;"
+        "  font-size:9.5pt;"
+        "  outline:0;"
+        "}"
+        "QTableWidget::item {"
+        "  padding:0px 10px;"
+        "  color:#1E293B;"
+        "}"
+        "QTableWidget::item:selected {"
+        "  background:#EFF6FF;"
+        "  color:#1D4ED8;"
+        "}"
+        "QHeaderView::section {"
+        "  background:#F8FAFC;"
+        "  color:#475569;"
+        "  font-size:8.5pt;"
+        "  font-weight:700;"
+        "  border:none;"
+        "  border-bottom:2px solid #E2E8F0;"
+        "  border-right:1px solid #E2E8F0;"
+        "  padding:0px 10px;"
+        "  height:36px;"
+        "}"
+    );
     root->addWidget(m_table);
 
     auto* btns   = new QHBoxLayout;
@@ -123,58 +210,103 @@ void BudgetWidget::loadBudgets() {
 
         m_table->insertRow(row);
         m_table->setItem(row, 0, new QTableWidgetItem(QString::number(id)));
-        m_table->setItem(row, 1, new QTableWidgetItem(cat));
+
+        auto* catItem = new QTableWidgetItem(cat);
+        m_table->setItem(row, 1, catItem);
 
         auto* limitItem = new QTableWidgetItem(AccountModel::formatKRW(limit));
-        limitItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
         m_table->setItem(row, 2, limitItem);
 
         auto* spentItem = new QTableWidgetItem(AccountModel::formatKRW(spent));
-        spentItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
         m_table->setItem(row, 3, spentItem);
 
-        // 잔여 컬럼 (col 4)
-        auto* remItem = new QTableWidgetItem(AccountModel::formatKRW(qAbs(remaining)));
-        remItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        // 잔여 컬럼 (col 4) — 초과 시 마이너스 부호 + 빨간색
+        QString remText = (remaining >= 0)
+            ? AccountModel::formatKRW(remaining)
+            : "-" + AccountModel::formatKRW(-remaining);
+        auto* remItem = new QTableWidgetItem(remText);
         remItem->setForeground(remaining >= 0 ? QColor("#059669") : QColor("#DC2626"));
         m_table->setItem(row, 4, remItem);
 
-        // 상태 배지 (col 5)
+        // 상태 배지 (col 5) — 소프트 파스텔 팔레트
         QString badgeText, badgeBg, badgeFg;
-        if (pct >= 100) {
-            badgeText = "초과"; badgeBg = "#991B1B"; badgeFg = "#FFFFFF";
+        if (spent > limit) {
+            badgeText = "초과"; badgeBg = "#FEE2E2"; badgeFg = "#991B1B";
+        } else if (spent == limit) {
+            badgeText = "도달"; badgeBg = "#FFEDD5"; badgeFg = "#9A3412";
         } else if (pct >= 80) {
-            badgeText = "위험"; badgeBg = "#FEE2E2"; badgeFg = "#991B1B";
-        } else if (pct >= 60) {
-            badgeText = "주의"; badgeBg = "#FEF9C3"; badgeFg = "#854D0E";
+            badgeText = "위험"; badgeBg = "#FEF08A"; badgeFg = "#854D0E";
         } else {
             badgeText = "안전"; badgeBg = "#DCFCE7"; badgeFg = "#166534";
         }
-        auto* badge = new QLabel(badgeText, m_table);
+        auto* badgeCell = new QWidget(m_table);
+        badgeCell->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        auto* badgeLay = new QHBoxLayout(badgeCell);
+        badgeLay->setContentsMargins(4, 6, 4, 6);
+        badgeLay->setAlignment(Qt::AlignCenter);
+
+        auto* badge = new QLabel(badgeText, badgeCell);
+        badge->setFixedWidth(48);
         badge->setAlignment(Qt::AlignCenter);
         badge->setStyleSheet(QString(
-            "background:%1; color:%2; border-radius:4px; padding:2px 8px; "
+            "background:%1; color:%2; border-radius:10px; padding:3px 6px; "
             "font-size:8pt; font-weight:700;").arg(badgeBg, badgeFg));
-        m_table->setCellWidget(row, 5, badge);
+        badgeLay->addWidget(badge);
+        m_table->setCellWidget(row, 5, badgeCell);
 
         // 진행률 바 (col 6)
         QString barColor;
-        if (pct >= 100)     barColor = "#991B1B";
-        else if (pct >= 80) barColor = "#EF4444";
-        else if (pct >= 60) barColor = "#F59E0B";
-        else                barColor = "#3B82F6";
+        if (spent > limit)          barColor = "#DC2626";
+        else if (spent == limit)    barColor = "#F97316";
+        else if (pct >= 80)         barColor = "#F59E0B";
+        else if (pct >= 60)         barColor = "#FBBF24";
+        else                        barColor = "#3B82F6";
 
-        auto* bar = new QProgressBar(m_table);
+        // 배경색이 진할수록 퍼센트 텍스트를 흰색으로 반전
+        QString textColor = (pct >= 60 || spent >= limit) ? "#FFFFFF" : "#374151";
+
+        auto* barCell = new QWidget(m_table);
+        barCell->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        auto* barCellLay = new QHBoxLayout(barCell);
+        barCellLay->setContentsMargins(8, 0, 8, 0);
+        barCellLay->setSpacing(0);
+        barCellLay->setAlignment(Qt::AlignVCenter);
+
+        auto* bar = new QProgressBar(barCell);
         bar->setRange(0, 100);
-        bar->setValue(qMin(pct, 100));
+        bar->setValue(spent > limit ? 100 : qMin(pct, 100));
         bar->setTextVisible(true);
         bar->setFormat(QString::number(pct) + "%");
-        bar->setFixedHeight(18);
-        bar->setStyleSheet(QString(
-            "QProgressBar { background:#F3F4F6; border:none; border-radius:9px; "
-            "text-align:center; font-size:8pt; font-weight:700; color:#374151; }"
-            "QProgressBar::chunk { background:%1; border-radius:9px; }").arg(barColor));
-        m_table->setCellWidget(row, 6, bar);
+        bar->setFixedHeight(20);
+        bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+        if (spent > limit) {
+            // 초과: 대각선 그라데이션으로 경고 의미를 세련되게 연출
+            bar->setStyleSheet(
+                "QProgressBar {"
+                "  background:#FEE2E2; border:none; border-radius:10px;"
+                "  text-align:center; font-size:8pt; font-weight:700; color:#FFFFFF;"
+                "}"
+                "QProgressBar::chunk {"
+                "  background:qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+                "    stop:0 #991B1B, stop:0.3 #DC2626,"
+                "    stop:0.5 #EF4444, stop:0.7 #DC2626, stop:1 #991B1B);"
+                "  border-radius:10px; margin:0;"
+                "}");
+        } else {
+            bar->setStyleSheet(QString(
+                "QProgressBar {"
+                "  background:#F1F5F9; border:none; border-radius:10px;"
+                "  text-align:center; font-size:8pt; font-weight:700; color:%1;"
+                "}"
+                "QProgressBar::chunk { background:%2; border-radius:10px; margin:0; }")
+                .arg(textColor, barColor));
+            QPalette barPal = bar->palette();
+            barPal.setColor(QPalette::Highlight, QColor(barColor));
+            bar->setPalette(barPal);
+        }
+        barCellLay->addWidget(bar);
+        m_table->setCellWidget(row, 6, barCell);
         ++row;
     }
 
@@ -197,7 +329,7 @@ void BudgetWidget::loadBudgets() {
     if (m_remainingLabel) {
         m_remainingLabel->setText(AccountModel::formatKRW(qAbs(totalRemaining)));
         m_remainingLabel->setStyleSheet(QString(
-            "color:%1; font-size:13pt; font-weight:700; background:transparent;")
+            "color:%1; font-size:11pt; font-weight:700; background:transparent;")
             .arg(totalRemaining >= 0 ? "#059669" : "#DC2626"));
     }
 }
@@ -313,5 +445,13 @@ void BudgetWidget::onDelete() {
         q.bindValue(":id", id);
         q.exec();
         loadBudgets();
+    }
+}
+
+void BudgetWidget::changeEvent(QEvent* e) {
+    QWidget::changeEvent(e);
+    if (e->type() == QEvent::PaletteChange) {
+        if (layout()) layout()->invalidate();
+        updateGeometry();
     }
 }
