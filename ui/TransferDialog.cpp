@@ -52,6 +52,15 @@ TransferDialog::TransferDialog(int userId, QWidget* parent)
     connect(can, &QPushButton::clicked, this, &QDialog::reject);
 }
 
+void TransferDialog::setFromAccount(int accountId) {
+    for (int i = 0; i < m_fromCombo->count(); ++i) {
+        if (m_fromCombo->itemData(i).toInt() == accountId) {
+            m_fromCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+}
+
 void TransferDialog::onTransfer() {
     int fromId = m_fromCombo->currentData().toInt();
     int toId   = m_toCombo->currentData().toInt();

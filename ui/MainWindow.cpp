@@ -2,7 +2,6 @@
 #include "DashboardWidget.h"
 #include "AccountWidget.h"
 #include "TransactionWidget.h"
-#include "TransferDialog.h"
 #include "BudgetWidget.h"
 #include "SettingsDialog.h"
 #include "AuthManager.h"
@@ -20,6 +19,7 @@
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QFrame>
+#include <QPixmap>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -67,15 +67,19 @@ void MainWindow::setupSidebar() {
     sidebar->setStyleSheet("QWidget#Sidebar { background: #1a1d2e; }");
 
     auto* sideLayout = new QVBoxLayout(sidebar);
-    sideLayout->setContentsMargins(14, 24, 14, 20);
+    sideLayout->setContentsMargins(14, 3, 14, 5);
     sideLayout->setSpacing(4);
 
-    // 앱 제목
-    auto* appTitle = new QLabel("계정 관리자", sidebar);
-    appTitle->setStyleSheet(
-        "color: #e2e8f0; font-size: 13pt; font-weight: 700; "
-        "padding: 0 4px 20px 4px;");
-    sideLayout->addWidget(appTitle);
+    // 로고 이미지
+    auto* logoLbl = new QLabel(sidebar);
+    QPixmap logoPix(":/images/logo.png");
+    if (!logoPix.isNull()) {
+        const int logoW = 160;
+        logoLbl->setPixmap(logoPix.scaledToWidth(logoW, Qt::SmoothTransformation));
+    }
+    logoLbl->setAlignment(Qt::AlignCenter);
+    logoLbl->setStyleSheet("padding: 0 0 4px 0; background: transparent;");
+    sideLayout->addWidget(logoLbl);
 
     // 구분선
     auto* divider = new QFrame(sidebar);
@@ -87,8 +91,8 @@ void MainWindow::setupSidebar() {
     struct NavItem { QString icon; QString label; };
     const QList<NavItem> items = {
         { "▣", "대시보드" },
-        { "◈", "계좌"     },
-        { "◉", "거래"     },
+        { "◈", "계좌관리"     },
+        { "◉", "거래내역"     },
         { "◆", "예산"     },
     };
 
@@ -260,14 +264,6 @@ void MainWindow::fetchExchangeRates() {
 
 void MainWindow::setupMenuBar() {
     auto* fileMenu = menuBar()->addMenu("파일(&F)");
-
-    auto* transferAct = fileMenu->addAction("이체...");
-    connect(transferAct, &QAction::triggered, this, [this]() {
-        TransferDialog dlg(m_userId, this);
-        dlg.exec();
-    });
-
-    fileMenu->addSeparator();
 
     auto* logoutAct = fileMenu->addAction("로그아웃");
     connect(logoutAct, &QAction::triggered, this, &MainWindow::onLogout);

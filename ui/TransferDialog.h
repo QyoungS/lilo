@@ -8,6 +8,7 @@ class TransferDialog : public QDialog {
     Q_OBJECT
 public:
     explicit TransferDialog(int userId, QWidget* parent = nullptr);
+    void setFromAccount(int accountId);
 
 private slots:
     void onTransfer();
