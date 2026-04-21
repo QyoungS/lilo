@@ -225,25 +225,28 @@ void DashboardWidget::setupUi() {
         "background:transparent; color:#111827; font-size:11pt; font-weight:800;");
     overLay->addWidget(m_pieCenterTopLbl);
     overLay->addWidget(m_pieCenterBotLbl);
-    wrapStack->addWidget(centerOverlay);  // 상단 레이어
+    wrapStack->addWidget(centerOverlay);  // 중앙 텍스트 레이어
 
-    // 하단 우측 커스텀 범례
-    m_pieLegendWidget = new QWidget(pieGroup);
+    // 범례를 StackAll 오버레이로 — 레이아웃 흐름 밖에 두어 차트 잘림 방지
+    m_pieLegendWidget = new QWidget(pieWrapper);
+    m_pieLegendWidget->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_pieLegendWidget->setStyleSheet("background:transparent;");
     m_pieLegendLayout = new QGridLayout(m_pieLegendWidget);
     m_pieLegendLayout->setContentsMargins(0, 0, 0, 0);
     m_pieLegendLayout->setHorizontalSpacing(12);
     m_pieLegendLayout->setVerticalSpacing(4);
 
-    // 차트(위) + 범례(아래 우측) 구조
-    auto* bottomRow = new QHBoxLayout;
-    bottomRow->setContentsMargins(0, 0, 0, 0);
-    bottomRow->setSpacing(0);
-    bottomRow->addStretch(1);
-    bottomRow->addWidget(m_pieLegendWidget);
+    // 범례를 우측 하단에 고정하는 래퍼 오버레이
+    auto* legendOverlay = new QWidget(pieWrapper);
+    legendOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+    legendOverlay->setStyleSheet("background:transparent;");
+    auto* legendOLay = new QVBoxLayout(legendOverlay);
+    legendOLay->setAlignment(Qt::AlignBottom | Qt::AlignRight);
+    legendOLay->setContentsMargins(0, 0, 8, 8);
+    legendOLay->addWidget(m_pieLegendWidget);
+    wrapStack->addWidget(legendOverlay);  // 범례 레이어
 
     pieLay->addWidget(pieWrapper, 1);
-    pieLay->addLayout(bottomRow);
 
     auto* chartRow = new QHBoxLayout;
     chartRow->setSpacing(14);
