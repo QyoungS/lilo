@@ -581,17 +581,18 @@ void DashboardWidget::updatePieChart() {
             auto* lbl = new QLabel(r.cat.left(6), legRow);
             lbl->setStyleSheet("color:#374151; font-size:8pt; font-weight:600; background:transparent;");
             lbl->setToolTip(r.cat);
-            lbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+            lbl->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
-            // 퍼센트 (우측 정렬, 고정 너비)
+            // 퍼센트 (카테고리 바로 옆, 고정 너비)
             auto* pctLbl = new QLabel(QString("%1%").arg(pct, 0, 'f', 1), legRow);
             pctLbl->setStyleSheet("color:#6B7280; font-size:8pt; background:transparent;");
-            pctLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-            pctLbl->setFixedWidth(42);
+            pctLbl->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            pctLbl->setFixedWidth(38);
 
             legH->addWidget(dot);
-            legH->addWidget(lbl, 1);
+            legH->addWidget(lbl);
             legH->addWidget(pctLbl);
+            legH->addStretch();
             m_pieLegendLayout->addWidget(legRow);
             ++li;
         }
