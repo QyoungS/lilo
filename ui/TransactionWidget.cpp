@@ -253,7 +253,7 @@ void TransactionWidget::setupUi() {
     searchBtn->setStyleSheet(kGrayBtn);
     resetBtn->setStyleSheet(kGrayBtn);
 
-    m_accountCombo->setMinimumWidth(130);
+    m_accountCombo->setMinimumWidth(90);
     m_typeFilter->setMinimumWidth(100);
     m_categoryFilter->setMinimumWidth(130);
     m_keywordEdit->setMinimumWidth(130);
@@ -277,7 +277,7 @@ void TransactionWidget::setupUi() {
     };
 
     // row 0: 계좌, 유형, 카테고리, 키워드
-    grid->addWidget(makeItem("계좌:",     m_accountCombo),  0, 0, 1, 2);
+    grid->addWidget(makeItem("계좌:",     m_accountCombo),  0, 0, 1, 1);
     grid->addWidget(makeItem("유형:",     m_typeFilter),    0, 2, 1, 1);
     grid->addWidget(makeItem("카테고리:", m_categoryFilter),0, 3, 1, 2);
     grid->addWidget(makeItem("키워드:",   m_keywordEdit),   0, 5, 1, 1);
