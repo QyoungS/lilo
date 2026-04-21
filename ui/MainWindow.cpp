@@ -90,10 +90,10 @@ void MainWindow::setupSidebar() {
     // 네비게이션 버튼
     struct NavItem { QString icon; QString label; };
     const QList<NavItem> items = {
-        { "▣", "대시보드" },
+        { "◈", "대시보드" },
         { "◈", "계좌관리"     },
-        { "◉", "거래내역"     },
-        { "◆", "예산"     },
+        { "◈", "거래내역"     },
+        { "◈", "예산"     },
     };
 
     static const QString kBtnBase =
@@ -171,17 +171,6 @@ void MainWindow::setupSidebar() {
     m_sideRateTimeLbl->setStyleSheet(
         "color: #94A3B8; font-size: 6.5pt; padding: 2px 4px 6px 4px;");
     sideLayout->addWidget(m_sideRateTimeLbl);
-
-    // 로그인 사용자 표시
-    auto* bottomSep = new QFrame(sidebar);
-    bottomSep->setFrameShape(QFrame::HLine);
-    bottomSep->setStyleSheet("color: #2d3152; margin-bottom: 6px;");
-    sideLayout->addWidget(bottomSep);
-
-    auto* userLabel = new QLabel(QString("  %1").arg(m_username), sidebar);
-    userLabel->setStyleSheet(
-        "color: #64748b; font-size: 9pt; padding: 4px 4px 0 4px;");
-    sideLayout->addWidget(userLabel);
 
     // ── 콘텐츠 영역 ──────────────────────────────────────
     m_stack = new QStackedWidget(central);

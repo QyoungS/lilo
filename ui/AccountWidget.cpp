@@ -208,13 +208,14 @@ void AccountWidget::buildCards() {
         const bool    sel = (a.id == m_selectedId);
 
         auto* card = new QFrame(container);
+        card->setObjectName("acctCard");
         card->setProperty("accountId", a.id);
         card->setCursor(Qt::PointingHandCursor);
         card->setMinimumHeight(210);
         card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         card->setStyleSheet(sel
-            ? "QFrame{border:2px solid #3B82F6;border-radius:12px;background:#F8FAFF;}"
-            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
+            ? "QFrame#acctCard{border:2px solid #3B82F6;border-radius:12px;background:#FFFFFF;}"
+            : "QFrame#acctCard{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
         card->installEventFilter(this);
         m_cardFrames.append(card);
 
@@ -357,12 +358,13 @@ void AccountWidget::buildList() {
         const bool    sel = (a.id == m_selectedId);
 
         auto* row = new QFrame(container);
+        row->setObjectName("acctRow");
         row->setProperty("accountId", a.id);
         row->setCursor(Qt::PointingHandCursor);
         row->setFixedHeight(82);
         row->setStyleSheet(sel
-            ? "QFrame{border:1.5px solid #93C5FD;border-radius:12px;background:#EFF6FF;}"
-            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
+            ? "QFrame#acctRow{border:2px solid #3B82F6;border-radius:12px;background:#FFFFFF;}"
+            : "QFrame#acctRow{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
         row->installEventFilter(this);
         m_listFrames.append(row);
 
@@ -462,14 +464,14 @@ void AccountWidget::setSelectedAccount(int id) {
     for (auto* f : m_cardFrames) {
         const bool sel = (f->property("accountId").toInt() == id);
         f->setStyleSheet(sel
-            ? "QFrame{border:2px solid #3B82F6;border-radius:12px;background:#F8FAFF;}"
-            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
+            ? "QFrame#acctCard{border:2px solid #3B82F6;border-radius:12px;background:#FFFFFF;}"
+            : "QFrame#acctCard{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
     }
     for (auto* f : m_listFrames) {
         const bool sel = (f->property("accountId").toInt() == id);
         f->setStyleSheet(sel
-            ? "QFrame{border:1.5px solid #93C5FD;border-radius:12px;background:#EFF6FF;}"
-            : "QFrame{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
+            ? "QFrame#acctRow{border:2px solid #3B82F6;border-radius:12px;background:#FFFFFF;}"
+            : "QFrame#acctRow{border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF;}");
     }
 }
 
