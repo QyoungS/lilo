@@ -212,8 +212,7 @@ void DashboardWidget::setupUi() {
     centerOverlay->setStyleSheet("background:transparent;");
     auto* overLay = new QVBoxLayout(centerOverlay);
     overLay->setAlignment(Qt::AlignCenter);
-    // 중앙보다 살짝 좌상단으로 이동 (범례와 겹침 방지)
-    overLay->setContentsMargins(0, 0, 40, 30);
+    overLay->setContentsMargins(0, 0, 0, 0);
     overLay->setSpacing(4);
     m_pieCenterTopLbl = new QLabel("—", centerOverlay);
     m_pieCenterTopLbl->setAlignment(Qt::AlignCenter);
@@ -227,26 +226,22 @@ void DashboardWidget::setupUi() {
     overLay->addWidget(m_pieCenterBotLbl);
     wrapStack->addWidget(centerOverlay);  // 중앙 텍스트 레이어
 
-    // 범례를 StackAll 오버레이로 — 레이아웃 흐름 밖에 두어 차트 잘림 방지
-    m_pieLegendWidget = new QWidget(pieWrapper);
-    m_pieLegendWidget->setAttribute(Qt::WA_TransparentForMouseEvents);
+    // 범례: pieWrapper 우측에 독립 위젯으로 배치 (겹침 없음)
+    m_pieLegendWidget = new QWidget(pieGroup);
     m_pieLegendWidget->setStyleSheet("background:transparent;");
+    m_pieLegendWidget->setFixedWidth(130);
     m_pieLegendLayout = new QGridLayout(m_pieLegendWidget);
-    m_pieLegendLayout->setContentsMargins(0, 0, 0, 0);
-    m_pieLegendLayout->setHorizontalSpacing(12);
-    m_pieLegendLayout->setVerticalSpacing(4);
+    m_pieLegendLayout->setContentsMargins(4, 0, 0, 0);
+    m_pieLegendLayout->setHorizontalSpacing(6);
+    m_pieLegendLayout->setVerticalSpacing(6);
 
-    // 범례를 우측 하단에 고정하는 래퍼 오버레이
-    auto* legendOverlay = new QWidget(pieWrapper);
-    legendOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
-    legendOverlay->setStyleSheet("background:transparent;");
-    auto* legendOLay = new QVBoxLayout(legendOverlay);
-    legendOLay->setAlignment(Qt::AlignBottom | Qt::AlignRight);
-    legendOLay->setContentsMargins(0, 0, 8, 8);
-    legendOLay->addWidget(m_pieLegendWidget);
-    wrapStack->addWidget(legendOverlay);  // 범례 레이어
-
-    pieLay->addWidget(pieWrapper, 1);
+    // 차트(좌) + 범례(우) — QHBoxLayout으로 나란히
+    auto* pieInnerLay = new QHBoxLayout;
+    pieInnerLay->setContentsMargins(0, 0, 0, 0);
+    pieInnerLay->setSpacing(0);
+    pieInnerLay->addWidget(pieWrapper, 1);
+    pieInnerLay->addWidget(m_pieLegendWidget, 0, Qt::AlignVCenter);
+    pieLay->addLayout(pieInnerLay, 1);
 
     auto* chartRow = new QHBoxLayout;
     chartRow->setSpacing(14);
