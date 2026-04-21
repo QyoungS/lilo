@@ -215,7 +215,10 @@ void TransactionWidget::setupUi() {
     m_keywordEdit->setPlaceholderText("키워드...");
     m_categoryFilter = new QComboBox(this);
     m_categoryFilter->setStyleSheet(kComboStyle);
-    m_categoryFilter->addItems({"전체", "급여", "식비", "교통", "쇼핑", "의료", "여가", "이체", "기타"});
+    m_categoryFilter->addItems({"전체",
+        "급여", "부수입", "용돈", "금융수익(이자/배당)",
+        "식비", "교통", "쇼핑", "주거/통신", "의료/건강", "여가", "교육",
+        "이체", "기타"});
 
     m_startDate = new QDateEdit(QDate::currentDate().addMonths(-1), this);
     m_endDate   = new QDateEdit(QDate::currentDate(), this);
@@ -449,7 +452,10 @@ void TransactionWidget::onEdit() {
     form->setContentsMargins(24, 24, 24, 24);
 
     auto* catBox = new QComboBox(dlg);
-    catBox->addItems({"급여", "식비", "교통", "쇼핑", "의료", "여가", "이체", "기타"});
+    if (t.type == "입금")
+        catBox->addItems({"급여", "부수입", "용돈", "금융수익(이자/배당)", "이체", "기타"});
+    else
+        catBox->addItems({"식비", "교통", "쇼핑", "주거/통신", "의료/건강", "여가", "교육", "이체", "기타"});
     catBox->setCurrentText(t.category);
 
     auto* descEdit = new QLineEdit(t.description, dlg);
