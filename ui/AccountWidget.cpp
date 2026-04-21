@@ -283,23 +283,24 @@ void AccountWidget::buildCards() {
         auto* act = new QHBoxLayout;
         act->setSpacing(7);
 
-        auto mkBtn = [&](const QString& text, const QString& bg, const QString& fg) {
+        auto mkBtn = [&](const QString& text, const QString& bg,
+                         const QString& fg, const QString& border) {
             auto* b = new QPushButton(text, card);
             b->setFixedHeight(34);
             b->setCursor(Qt::PointingHandCursor);
             b->setStyleSheet(QString(
-                "QPushButton{background:%1;color:%2;border:none;border-radius:8px;"
+                "QPushButton{background:%1;color:%2;border:1px solid %3;border-radius:8px;"
                 "font-size:9pt;font-weight:700;padding:0 6px;}"
-                "QPushButton:hover{background:%3;}"
-            ).arg(bg, fg, QColor(bg).darker(108).name()));
+                "QPushButton:hover{background:%2;color:#FFFFFF;border-color:%2;}"
+            ).arg(bg, fg, border));
             return b;
         };
 
         const int aid = a.id;
-        auto* depBtn  = mkBtn("입금", "#ECFDF5", "#059669");
-        auto* withBtn = mkBtn("출금", "#FEF2F2", "#DC2626");
-        auto* trfBtn  = mkBtn("이체", "#EFF6FF", "#1D4ED8");
-        auto* moreBtn = mkBtn("···",  "#F3F4F6", "#6B7280");
+        auto* depBtn  = mkBtn("입금", "#ECFDF5", "#059669", "#A7F3D0");
+        auto* withBtn = mkBtn("출금", "#FEF2F2", "#DC2626", "#FECACA");
+        auto* trfBtn  = mkBtn("이체", "#EFF6FF", "#1D4ED8", "#BFDBFE");
+        auto* moreBtn = mkBtn("···",  "#F3F4F6", "#6B7280", "#E5E7EB");
         moreBtn->setFixedWidth(40);
 
         connect(depBtn,  &QPushButton::clicked, this, [this, aid]() { doDeposit(aid);  });
@@ -413,24 +414,25 @@ void AccountWidget::buildList() {
         hl->addSpacing(6);
 
         // 액션 버튼
-        auto mkRowBtn = [&](const QString& text, const QString& bg, const QString& fg) {
+        auto mkRowBtn = [&](const QString& text, const QString& bg,
+                            const QString& fg, const QString& border) {
             auto* b = new QPushButton(text, row);
             b->setMinimumWidth(54);
             b->setFixedHeight(34);
             b->setCursor(Qt::PointingHandCursor);
             b->setStyleSheet(QString(
-                "QPushButton{background:%1;color:%2;border:none;border-radius:8px;"
+                "QPushButton{background:%1;color:%2;border:1px solid %3;border-radius:8px;"
                 "font-size:9pt;font-weight:700;padding:0 6px;}"
-                "QPushButton:hover{background:%3;}"
-            ).arg(bg, fg, QColor(bg).darker(108).name()));
+                "QPushButton:hover{background:%2;color:#FFFFFF;border-color:%2;}"
+            ).arg(bg, fg, border));
             return b;
         };
 
         const int aid = a.id;
-        auto* depBtn  = mkRowBtn("입금",  "#ECFDF5", "#059669");
-        auto* withBtn = mkRowBtn("출금",  "#FEF2F2", "#DC2626");
-        auto* trfBtn  = mkRowBtn("이체",  "#EFF6FF", "#1D4ED8");
-        auto* moreBtn = mkRowBtn("···",   "#F3F4F6", "#6B7280");
+        auto* depBtn  = mkRowBtn("입금",  "#ECFDF5", "#059669", "#A7F3D0");
+        auto* withBtn = mkRowBtn("출금",  "#FEF2F2", "#DC2626", "#FECACA");
+        auto* trfBtn  = mkRowBtn("이체",  "#EFF6FF", "#1D4ED8", "#BFDBFE");
+        auto* moreBtn = mkRowBtn("···",   "#F3F4F6", "#6B7280", "#E5E7EB");
         moreBtn->setMinimumWidth(36);
 
         connect(depBtn,  &QPushButton::clicked, this, [this, aid]() { doDeposit(aid);  });
