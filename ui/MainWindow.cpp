@@ -30,7 +30,7 @@
 MainWindow::MainWindow(int userId, const QString& username, QWidget* parent)
     : QMainWindow(parent), m_userId(userId), m_username(username)
 {
-    setWindowTitle("계정 관리자");
+    setWindowTitle("VEDA");
     setMinimumSize(1100, 700);
 
     NotificationManager::instance().initialize(this);
