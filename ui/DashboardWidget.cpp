@@ -566,8 +566,8 @@ void DashboardWidget::updatePieChart() {
         for (const auto& r : rows) {
             double pct = (totalExp > 0) ? (r.amt / totalExp * 100.0) : 0.0;
 
-            int gridRow = li / 2;
-            int gridCol = li % 2;
+            int gridRow = li;
+            int gridCol = 0;
 
             auto* legRow = new QWidget(m_pieLegendWidget);
             legRow->setStyleSheet("background:transparent;");
